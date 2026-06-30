@@ -14,6 +14,11 @@ export interface AppConfig {
     enabled: boolean;
     path: string;
   };
+  auth: {
+    googleClientId: string;
+    jwtSecret: string;
+    jwtExpiresIn: string;
+  };
 }
 
 export default (): AppConfig => ({
@@ -27,5 +32,10 @@ export default (): AppConfig => ({
   swagger: {
     enabled: (process.env.SWAGGER_ENABLED ?? 'true') === 'true',
     path: process.env.SWAGGER_PATH ?? 'docs',
+  },
+  auth: {
+    googleClientId: process.env.GOOGLE_CLIENT_ID ?? '',
+    jwtSecret: process.env.JWT_SECRET as string,
+    jwtExpiresIn: process.env.JWT_EXPIRES_IN ?? '30d',
   },
 });

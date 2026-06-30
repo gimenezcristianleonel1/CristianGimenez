@@ -92,13 +92,67 @@ enum OutboxStatus {
 }
 
 // ------------------------------------------------------------
+//  User (identidad - "Sign in with Google")
+// ------------------------------------------------------------
+
+model User {
+  id       String  @id @default(uuid()) @db.Uuid
+  /// Identificador estable de Google (claim `sub`).
+  googleId String  @unique @map("google_id")
+  email    String  @unique
+  name     String?
+  picture  String?
+
+  metadata Json @default("{}") @db.JsonB
+
+  /// Establecimientos de los que el usuario es dueño.
+  establishments Establishment[]
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("users")
+}
+
+// ------------------------------------------------------------
+//  Establishment (Establecimiento / Finca / Empresa ganadera)
+//  Raíz de multi-tenancy: todos los datos cuelgan de un establecimiento.
+// ------------------------------------------------------------
+
+model Establishment {
+  id      String  @id @default(uuid()) @db.Uuid
+  name    String
+  country String?
+
+  metadata Json @default("{}") @db.JsonB
+
+  /// Dueño del establecimiento (clave foránea al usuario autenticado).
+  ownerId String @map("owner_id") @db.Uuid
+  owner   User   @relation(fields: [ownerId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  animals   Animal[]
+  locations Location[]
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([ownerId])
+  @@map("establishments")
+}
+
+// ------------------------------------------------------------
 //  Animal (agregado raíz de trazabilidad)
 // ------------------------------------------------------------
 
 model Animal {
   id     String       @id @default(uuid()) @db.Uuid
-  /// Caravana / Arete: identificador único físico del animal.
-  tagId  String       @unique @map("tag_id")
+
+  /// Establecimiento dueño del animal (multi-tenancy).
+  establishmentId String        @map("establishment_id") @db.Uuid
+  establishment   Establishment @relation(fields: [establishmentId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  /// Caravana / Arete: único POR establecimiento.
+  tagId  String       @map("tag_id")
   species Species
   breed  String
   sex    Sex
@@ -130,6 +184,8 @@ model Animal {
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
+  @@unique([establishmentId, tagId])
+  @@index([establishmentId])
   @@index([status])
   @@index([species])
   @@index([currentLocationId])
@@ -202,7 +258,13 @@ model HealthRecord {
 
 model Location {
   id   String       @id @default(uuid()) @db.Uuid
-  name String       @unique
+
+  /// Establecimiento dueño de la ubicación (multi-tenancy).
+  establishmentId String        @map("establishment_id") @db.Uuid
+  establishment   Establishment @relation(fields: [establishmentId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  /// Nombre único POR establecimiento.
+  name String
   type LocationType
 
   /// Capacidad máxima de animales (control de sobrepastoreo).
@@ -219,6 +281,8 @@ model Location {
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
+  @@unique([establishmentId, name])
+  @@index([establishmentId])
   @@index([type])
   @@map("locations")
 }

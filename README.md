@@ -8,6 +8,36 @@ hacia microservicios, telemetría IoT y pipelines de Machine Learning.
 > Estado: **MVP COMPLETO + PWA offline-first.** Backend (5 pasos) y frontend listos.
 > Pasos: 1 (Config) · 2 (Modelado) · 3 (Inventario Animal) · 4 (Sanidad + Movimientos) · 5 (Swagger + Tests).
 
+## 🔐 Autenticación (Sign in with Google) + Multi-tenancy
+
+Los usuarios inician sesión con **Google**; sus datos se persisten en nuestra base y
+cada cuenta queda vinculada a su **Establecimiento** de forma aislada (multi-tenant).
+
+**Flujo:** el frontend obtiene un *ID token* de Google → lo envía a `POST /auth/google`
+→ el backend lo **verifica** (`google-auth-library`), hace *upsert* del `User`, crea su
+`Establishment` en el primer login (o lo recupera en los siguientes) y emite un **JWT
+propio**. Todas las rutas (salvo `/health` y `/auth/google`) exigen `Authorization: Bearer`.
+
+- **Modelos:** `User` (identidad Google) y `Establishment` (FK `ownerId` → `User`).
+- **Aislamiento:** `Animal` y `Location` llevan `establishmentId`; caravana y nombre de
+  ubicación son únicos **por establecimiento**. Cada request sólo ve/edita datos de su
+  establecimiento (verificado con tests de aislamiento entre tenants).
+- **Endpoints:** `POST /auth/google`, `GET /auth/me`, `PATCH /auth/establishment`.
+
+### Variables de entorno (auth)
+| Variable | Descripción |
+|----------|-------------|
+| `GOOGLE_CLIENT_ID` | OAuth Client ID (Web) de Google Cloud Console |
+| `JWT_SECRET` | Secreto para firmar los JWT (cambiar en producción) |
+| `JWT_EXPIRES_IN` | Duración del token (default `30d`, pensado para uso offline) |
+| `VITE_GOOGLE_CLIENT_ID` | (frontend) El mismo Client ID |
+
+> Crea un **OAuth 2.0 Client ID** tipo *Web application* en
+> [Google Cloud Console](https://console.cloud.google.com/apis/credentials), agregá el
+> origen del frontend (ej. `http://localhost:5173`) y copiá el Client ID en ambos `.env`.
+
+---
+
 ## 🗂️ Estructura del repositorio
 
 | Carpeta | Qué es |

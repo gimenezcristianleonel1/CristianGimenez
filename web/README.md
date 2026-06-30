@@ -43,10 +43,24 @@ Acción del usuario
 - Operaciones rechazadas por el servidor (validación / regla de negocio) **no se
   reintentan**: se guardan en `conflicts` y se muestran en el panel de inicio.
 
+## 🔐 Inicio de sesión con Google
+
+- Pantalla de login con **"Sign in with Google"** (Google Identity Services).
+- El ID token de Google se canjea por un **JWT propio** en el backend; la sesión
+  (token + usuario + establecimiento) se guarda en `localStorage` y **persiste** entre
+  recargas y uso offline.
+- El nombre del establecimiento se muestra en la cabecera; los datos quedan **aislados
+  por cuenta** (al cambiar de establecimiento en el mismo dispositivo, se limpia el caché local).
+- El token se adjunta automáticamente (`Authorization: Bearer`) en cada llamada y en la
+  sincronización. Si expira, la app vuelve al login.
+
+> ⚠️ El **primer** inicio de sesión requiere conexión a internet (Google). Luego la app
+> funciona offline con la sesión guardada.
+
 ## 🚀 Desarrollo
 
 ```bash
-cp .env.example .env          # configura VITE_API_URL (default http://localhost:3000/api/v1)
+cp .env.example .env          # VITE_API_URL + VITE_GOOGLE_CLIENT_ID
 npm install
 npm run dev                   # http://localhost:5173
 ```

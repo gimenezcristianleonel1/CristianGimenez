@@ -6,6 +6,7 @@ import { SanitaryService } from './sanitary.service';
 import { SanitaryRepository } from './sanitary.repository';
 
 const DAY = 86_400_000;
+const EST = 'est-1';
 
 describe('SanitaryService', () => {
   let service: SanitaryService;
@@ -15,7 +16,7 @@ describe('SanitaryService', () => {
 
   beforeEach(() => {
     repo = { create: jest.fn(), findByAnimal: jest.fn(), findActiveWithdrawals: jest.fn() };
-    animals = { findById: jest.fn().mockResolvedValue({ id: 'a1' }) };
+    animals = { findById: jest.fn().mockResolvedValue({ id: 'a1', establishmentId: EST }) };
     events = { publish: jest.fn(), publishAll: jest.fn() };
     service = new SanitaryService(
       repo as unknown as SanitaryRepository,
@@ -26,7 +27,7 @@ describe('SanitaryService', () => {
 
   it('requires medication for a VACCINATION event', async () => {
     await expect(
-      service.createForAnimal('a1', { eventType: HealthEventType.VACCINATION }),
+      service.createForAnimal(EST, 'a1', { eventType: HealthEventType.VACCINATION }),
     ).rejects.toBeInstanceOf(BadRequestException);
     expect(repo.create).not.toHaveBeenCalled();
   });
@@ -35,7 +36,7 @@ describe('SanitaryService', () => {
     repo.create.mockImplementation((data) => Promise.resolve(data));
     const appliedAt = '2026-01-01T00:00:00.000Z';
 
-    await service.createForAnimal('a1', {
+    await service.createForAnimal(EST, 'a1', {
       eventType: HealthEventType.TREATMENT,
       medication: 'Oxitetraciclina',
       dosage: '10ml',
@@ -51,7 +52,7 @@ describe('SanitaryService', () => {
 
   it('leaves withdrawalUntil null when there is no withdrawal period', async () => {
     repo.create.mockImplementation((data) => Promise.resolve(data));
-    await service.createForAnimal('a1', {
+    await service.createForAnimal(EST, 'a1', {
       eventType: HealthEventType.CHECKUP,
       withdrawalDays: 0,
     });
@@ -62,7 +63,7 @@ describe('SanitaryService', () => {
     repo.findActiveWithdrawals.mockResolvedValue([
       { withdrawalUntil: new Date(Date.now() + 3 * DAY) },
     ]);
-    const status = await service.getWithdrawalStatus('a1');
+    const status = await service.getWithdrawalStatus(EST, 'a1');
     expect(status.underWithdrawal).toBe(true);
     expect(status.activeRecords).toBe(1);
   });
@@ -70,7 +71,7 @@ describe('SanitaryService', () => {
   it('throws 404 when the animal does not exist', async () => {
     animals.findById.mockResolvedValue(null);
     await expect(
-      service.createForAnimal('missing', {
+      service.createForAnimal(EST, 'missing', {
         eventType: HealthEventType.CHECKUP,
       }),
     ).rejects.toBeInstanceOf(NotFoundException);

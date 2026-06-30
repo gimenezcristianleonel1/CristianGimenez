@@ -14,8 +14,10 @@ export class LocationsRepository {
     return this.prisma.location.findUnique({ where: { id } });
   }
 
-  findByName(name: string): Promise<Location | null> {
-    return this.prisma.location.findUnique({ where: { name } });
+  findByName(establishmentId: string, name: string): Promise<Location | null> {
+    return this.prisma.location.findUnique({
+      where: { establishmentId_name: { establishmentId, name } },
+    });
   }
 
   async findMany(

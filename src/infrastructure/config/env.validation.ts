@@ -17,4 +17,9 @@ export const envValidationSchema = Joi.object({
 
   SWAGGER_ENABLED: Joi.boolean().default(true),
   SWAGGER_PATH: Joi.string().default('docs'),
+
+  // Autenticación
+  GOOGLE_CLIENT_ID: Joi.string().allow('').default(''),
+  JWT_SECRET: Joi.string().min(16).default('dev-insecure-change-me-please-32chars'),
+  JWT_EXPIRES_IN: Joi.string().default('30d'),
 });

@@ -5,16 +5,18 @@ import { CreateLocationDto } from './dto/create-location.dto';
 import { UpdateLocationDto } from './dto/update-location.dto';
 import { QueryLocationsDto } from './dto/query-locations.dto';
 
+/** All operations are scoped to the caller's establishment (multi-tenancy). */
 @Injectable()
 export class LocationsService {
   constructor(private readonly repo: LocationsRepository) {}
 
-  async create(dto: CreateLocationDto): Promise<Location> {
-    if (await this.repo.findByName(dto.name)) {
+  async create(establishmentId: string, dto: CreateLocationDto): Promise<Location> {
+    if (await this.repo.findByName(establishmentId, dto.name)) {
       throw new ConflictException(`A location named "${dto.name}" already exists`);
     }
     const data: Prisma.LocationCreateInput = {
       ...(dto.id ? { id: dto.id } : {}),
+      establishment: { connect: { id: establishmentId } },
       name: dto.name,
       type: dto.type,
       capacity: dto.capacity ?? null,
@@ -25,11 +27,17 @@ export class LocationsService {
     return this.repo.create(data);
   }
 
-  async findAll(query: QueryLocationsDto): Promise<{
-    data: Array<Location & { occupancy?: number }>;
+  async findAll(
+    establishmentId: string,
+    query: QueryLocationsDto,
+  ): Promise<{
+    data: Location[];
     meta: { total: number; page: number; limit: number; totalPages: number };
   }> {
-    const where: Prisma.LocationWhereInput = query.type ? { type: query.type } : {};
+    const where: Prisma.LocationWhereInput = {
+      establishmentId,
+      ...(query.type ? { type: query.type } : {}),
+    };
     const skip = (query.page - 1) * query.limit;
     const { items, total } = await this.repo.findMany(where, skip, query.limit);
     return {
@@ -43,17 +51,17 @@ export class LocationsService {
     };
   }
 
-  async findOne(id: string): Promise<Location & { occupancy: number }> {
-    const location = await this.getExistingOrThrow(id);
+  async findOne(establishmentId: string, id: string): Promise<Location & { occupancy: number }> {
+    const location = await this.getOwnedOrThrow(establishmentId, id);
     const occupancy = await this.repo.countResidents(id);
     return { ...location, occupancy };
   }
 
-  async update(id: string, dto: UpdateLocationDto): Promise<Location> {
-    const location = await this.getExistingOrThrow(id);
+  async update(establishmentId: string, id: string, dto: UpdateLocationDto): Promise<Location> {
+    const location = await this.getOwnedOrThrow(establishmentId, id);
 
     if (dto.name && dto.name !== location.name) {
-      const existing = await this.repo.findByName(dto.name);
+      const existing = await this.repo.findByName(establishmentId, dto.name);
       if (existing) {
         throw new ConflictException(`A location named "${dto.name}" already exists`);
       }
@@ -89,8 +97,8 @@ export class LocationsService {
     return this.repo.update(id, data);
   }
 
-  async remove(id: string): Promise<void> {
-    await this.getExistingOrThrow(id);
+  async remove(establishmentId: string, id: string): Promise<void> {
+    await this.getOwnedOrThrow(establishmentId, id);
     const residents = await this.repo.countResidents(id);
     if (residents > 0) {
       throw new ConflictException(
@@ -100,9 +108,9 @@ export class LocationsService {
     await this.repo.delete(id);
   }
 
-  private async getExistingOrThrow(id: string): Promise<Location> {
+  private async getOwnedOrThrow(establishmentId: string, id: string): Promise<Location> {
     const location = await this.repo.findById(id);
-    if (!location) {
+    if (!location || location.establishmentId !== establishmentId) {
       throw new NotFoundException(`Location ${id} not found`);
     }
     return location;

@@ -30,8 +30,12 @@ export class SanitaryService {
     @Inject(EVENT_PUBLISHER) private readonly events: IEventPublisher,
   ) {}
 
-  async createForAnimal(animalId: string, dto: CreateHealthRecordDto): Promise<HealthRecord> {
-    await this.assertAnimalExists(animalId);
+  async createForAnimal(
+    establishmentId: string,
+    animalId: string,
+    dto: CreateHealthRecordDto,
+  ): Promise<HealthRecord> {
+    await this.assertAnimalOwned(establishmentId, animalId);
 
     if (MEDICATION_REQUIRED.includes(dto.eventType) && !dto.medication) {
       throw new BadRequestException(
@@ -69,14 +73,17 @@ export class SanitaryService {
     return record;
   }
 
-  async findForAnimal(animalId: string): Promise<HealthRecord[]> {
-    await this.assertAnimalExists(animalId);
+  async findForAnimal(establishmentId: string, animalId: string): Promise<HealthRecord[]> {
+    await this.assertAnimalOwned(establishmentId, animalId);
     return this.repo.findByAnimal(animalId);
   }
 
   /** Whether the animal is currently within any drug-withdrawal period. */
-  async getWithdrawalStatus(animalId: string): Promise<WithdrawalStatus> {
-    await this.assertAnimalExists(animalId);
+  async getWithdrawalStatus(
+    establishmentId: string,
+    animalId: string,
+  ): Promise<WithdrawalStatus> {
+    await this.assertAnimalOwned(establishmentId, animalId);
     const active = await this.repo.findActiveWithdrawals(animalId);
     return {
       animalId,
@@ -86,9 +93,9 @@ export class SanitaryService {
     };
   }
 
-  private async assertAnimalExists(animalId: string): Promise<void> {
+  private async assertAnimalOwned(establishmentId: string, animalId: string): Promise<void> {
     const animal = await this.animals.findById(animalId);
-    if (!animal) {
+    if (!animal || animal.establishmentId !== establishmentId) {
       throw new NotFoundException(`Animal ${animalId} not found`);
     }
   }

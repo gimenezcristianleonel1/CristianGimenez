@@ -40,3 +40,16 @@ export class LivestockDB extends Dexie {
 }
 
 export const db = new LivestockDB();
+
+/** Wipes all local data — used when a different establishment logs in. */
+export async function clearAllData(): Promise<void> {
+  await Promise.all([
+    db.animals.clear(),
+    db.locations.clear(),
+    db.weights.clear(),
+    db.health.clear(),
+    db.movements.clear(),
+    db.outbox.clear(),
+    db.conflicts.clear(),
+  ]);
+}

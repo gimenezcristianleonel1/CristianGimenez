@@ -14,8 +14,10 @@ import { toOutboxRow } from '@infrastructure/events/outbox.mapper';
 export class AnimalsRepository {
   constructor(private readonly prisma: PrismaService) {}
 
-  findByTagId(tagId: string): Promise<Animal | null> {
-    return this.prisma.animal.findUnique({ where: { tagId } });
+  findByTagId(establishmentId: string, tagId: string): Promise<Animal | null> {
+    return this.prisma.animal.findUnique({
+      where: { establishmentId_tagId: { establishmentId, tagId } },
+    });
   }
 
   findById(id: string): Promise<Animal | null> {

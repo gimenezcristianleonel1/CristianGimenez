@@ -2,9 +2,11 @@ import { NavLink, Outlet } from 'react-router-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../db/db';
 import { useSync } from '../sync/SyncProvider';
+import { useAuth } from '../auth/AuthProvider';
 
 export default function Layout() {
   const { online, syncing, sync, lastSyncAt } = useSync();
+  const { user, establishment, logout } = useAuth();
   const pending = useLiveQuery(() => db.outbox.count(), [], 0);
   const conflicts = useLiveQuery(() => db.conflicts.count(), [], 0);
 
@@ -12,10 +14,16 @@ export default function Layout() {
     <div className="app">
       <header className="appbar">
         <div className="appbar-row">
-          <h1>🐄 Ganadería</h1>
+          <h1>{establishment?.name ?? '🐄 Ganadería'}</h1>
           <span className={`pill ${online ? 'pill-online' : 'pill-offline'}`}>
             {online ? '● En línea' : '○ Sin conexión'}
           </span>
+        </div>
+        <div className="appbar-row appbar-user">
+          <span className="muted">👤 {user?.name ?? user?.email}</span>
+          <button className="btn-link" onClick={logout}>
+            Salir
+          </button>
         </div>
         <div className="appbar-row appbar-sync">
           <span className="muted">

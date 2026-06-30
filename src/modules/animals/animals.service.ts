@@ -40,6 +40,10 @@ const STATUS_TRANSITIONS: Record<AnimalStatus, AnimalStatus[]> = {
 /** Statuses that imply the animal could go to consumption / be sold. */
 const SALE_STATUSES: AnimalStatus[] = [AnimalStatus.READY_FOR_SALE, AnimalStatus.SOLD];
 
+/**
+ * All operations are scoped to the caller's `establishmentId` (multi-tenancy):
+ * an animal is only visible/editable within the establishment that owns it.
+ */
 @Injectable()
 export class AnimalsService {
   constructor(
@@ -50,15 +54,15 @@ export class AnimalsService {
 
   // ---------------------------------------------------------------- CRUD
 
-  async create(dto: CreateAnimalDto): Promise<Animal> {
-    // Unique caravan/tag.
-    if (await this.repo.findByTagId(dto.tagId)) {
+  async create(establishmentId: string, dto: CreateAnimalDto): Promise<Animal> {
+    // Unique caravan/tag within the establishment.
+    if (await this.repo.findByTagId(establishmentId, dto.tagId)) {
       throw new ConflictException(`An animal with tagId "${dto.tagId}" already exists`);
     }
 
-    await this.assertParent(dto.motherId, Sex.FEMALE, 'mother');
-    await this.assertParent(dto.fatherId, Sex.MALE, 'father');
-    await this.assertLocationHasCapacity(dto.currentLocationId);
+    await this.assertParent(establishmentId, dto.motherId, Sex.FEMALE, 'mother');
+    await this.assertParent(establishmentId, dto.fatherId, Sex.MALE, 'father');
+    await this.assertLocationHasCapacity(establishmentId, dto.currentLocationId);
 
     // Use the client-supplied id when present (idempotent offline sync),
     // otherwise generate one. Having the id up-front lets the Domain Event
@@ -66,6 +70,7 @@ export class AnimalsService {
     const id = dto.id ?? randomUUID();
     const data: Prisma.AnimalCreateInput = {
       id,
+      establishment: { connect: { id: establishmentId } },
       tagId: dto.tagId,
       species: dto.species,
       breed: dto.breed,
@@ -94,11 +99,15 @@ export class AnimalsService {
     return animal;
   }
 
-  async findAll(query: QueryAnimalsDto): Promise<{
+  async findAll(
+    establishmentId: string,
+    query: QueryAnimalsDto,
+  ): Promise<{
     data: Animal[];
     meta: { total: number; page: number; limit: number; totalPages: number };
   }> {
     const where: Prisma.AnimalWhereInput = {
+      establishmentId,
       ...(query.species ? { species: query.species } : {}),
       ...(query.status ? { status: query.status } : {}),
       ...(query.locationId ? { currentLocationId: query.locationId } : {}),
@@ -116,24 +125,24 @@ export class AnimalsService {
     };
   }
 
-  async findOne(id: string) {
+  async findOne(establishmentId: string, id: string) {
     const animal = await this.repo.findByIdWithRelations(id);
-    if (!animal) {
+    if (!animal || animal.establishmentId !== establishmentId) {
       throw new NotFoundException(`Animal ${id} not found`);
     }
     return animal;
   }
 
-  async update(id: string, dto: UpdateAnimalDto): Promise<Animal> {
-    const animal = await this.getExistingOrThrow(id);
+  async update(establishmentId: string, id: string, dto: UpdateAnimalDto): Promise<Animal> {
+    const animal = await this.getOwnedOrThrow(establishmentId, id);
 
     if (dto.motherId !== undefined) {
       if (dto.motherId === id) throw new BadRequestException('An animal cannot be its own mother');
-      await this.assertParent(dto.motherId, Sex.FEMALE, 'mother');
+      await this.assertParent(establishmentId, dto.motherId, Sex.FEMALE, 'mother');
     }
     if (dto.fatherId !== undefined) {
       if (dto.fatherId === id) throw new BadRequestException('An animal cannot be its own father');
-      await this.assertParent(dto.fatherId, Sex.MALE, 'father');
+      await this.assertParent(establishmentId, dto.fatherId, Sex.MALE, 'father');
     }
 
     const data: Prisma.AnimalUpdateInput = {
@@ -153,15 +162,15 @@ export class AnimalsService {
     return this.repo.update(id, data);
   }
 
-  async remove(id: string): Promise<void> {
-    await this.getExistingOrThrow(id);
+  async remove(establishmentId: string, id: string): Promise<void> {
+    await this.getOwnedOrThrow(establishmentId, id);
     await this.repo.delete(id);
   }
 
   // ------------------------------------------------------------- Status
 
-  async changeStatus(id: string, dto: ChangeStatusDto): Promise<Animal> {
-    const animal = await this.getExistingOrThrow(id);
+  async changeStatus(establishmentId: string, id: string, dto: ChangeStatusDto): Promise<Animal> {
+    const animal = await this.getOwnedOrThrow(establishmentId, id);
     const from = animal.status;
     const to = dto.status;
 
@@ -194,8 +203,8 @@ export class AnimalsService {
 
   // ------------------------------------------------------------- Weights
 
-  async addWeight(id: string, dto: AddWeightDto): Promise<WeightHistory> {
-    await this.getExistingOrThrow(id);
+  async addWeight(establishmentId: string, id: string, dto: AddWeightDto): Promise<WeightHistory> {
+    await this.getOwnedOrThrow(establishmentId, id);
     const measuredAt = dto.measuredAt ? new Date(dto.measuredAt) : new Date();
     const source = dto.source ?? WeightSource.MANUAL;
 
@@ -218,16 +227,20 @@ export class AnimalsService {
     return weight;
   }
 
-  getWeightHistory(id: string): Promise<WeightHistory[]> {
-    return this.getExistingOrThrow(id).then(() => this.repo.getWeightHistory(id));
+  async getWeightHistory(establishmentId: string, id: string): Promise<WeightHistory[]> {
+    await this.getOwnedOrThrow(establishmentId, id);
+    return this.repo.getWeightHistory(id);
   }
 
   /**
    * Projects the animal's future weight (GDP + 30/60/90 days) using the
    * configured PredictiveEngine over its full weight time-series.
    */
-  async getWeightProjection(id: string): Promise<WeightProjectionResult> {
-    const animal = await this.getExistingOrThrow(id);
+  async getWeightProjection(
+    establishmentId: string,
+    id: string,
+  ): Promise<WeightProjectionResult> {
+    const animal = await this.getOwnedOrThrow(establishmentId, id);
     const history = await this.repo.getWeightHistory(id);
 
     const samples = history.map((h) => ({
@@ -245,15 +258,17 @@ export class AnimalsService {
 
   // ------------------------------------------------------------- Helpers
 
-  private async getExistingOrThrow(id: string): Promise<Animal> {
+  /** Fetches an animal and ensures it belongs to the caller's establishment. */
+  private async getOwnedOrThrow(establishmentId: string, id: string): Promise<Animal> {
     const animal = await this.repo.findById(id);
-    if (!animal) {
+    if (!animal || animal.establishmentId !== establishmentId) {
       throw new NotFoundException(`Animal ${id} not found`);
     }
     return animal;
   }
 
   private async assertParent(
+    establishmentId: string,
     parentId: string | undefined,
     expectedSex: Sex,
     role: 'mother' | 'father',
@@ -262,7 +277,7 @@ export class AnimalsService {
       return;
     }
     const parent = await this.repo.findById(parentId);
-    if (!parent) {
+    if (!parent || parent.establishmentId !== establishmentId) {
       throw new BadRequestException(`The ${role} (${parentId}) does not exist`);
     }
     if (parent.sex !== expectedSex) {
@@ -270,12 +285,15 @@ export class AnimalsService {
     }
   }
 
-  private async assertLocationHasCapacity(locationId: string | undefined): Promise<void> {
+  private async assertLocationHasCapacity(
+    establishmentId: string,
+    locationId: string | undefined,
+  ): Promise<void> {
     if (!locationId) {
       return;
     }
     const location = await this.repo.findLocationById(locationId);
-    if (!location) {
+    if (!location || location.establishmentId !== establishmentId) {
       throw new BadRequestException(`Location ${locationId} does not exist`);
     }
     if (location.capacity !== null) {

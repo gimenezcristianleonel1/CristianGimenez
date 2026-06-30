@@ -1,26 +1,59 @@
 /**
  * Development seed script.
- * Populates a few locations and animals (with weight history) so the API can
- * be exercised locally. Idempotent on `tagId` / location `name`.
+ * Creates a demo user + establishment, then a few locations and animals
+ * (with weight history) scoped to that establishment. Idempotent.
  *
  * Run with: npm run prisma:seed
  */
-import { PrismaClient, Species, Sex, AnimalStatus, LocationType, WeightSource } from '@prisma/client';
+import {
+  PrismaClient,
+  Species,
+  Sex,
+  AnimalStatus,
+  LocationType,
+  WeightSource,
+} from '@prisma/client';
 
 const prisma = new PrismaClient();
 
 async function main(): Promise<void> {
+  // --- Demo user + establishment (tenant) ---
+  const user = await prisma.user.upsert({
+    where: { googleId: 'demo-seed-user' },
+    update: {},
+    create: { googleId: 'demo-seed-user', email: 'demo@ganaderia.local', name: 'Productor Demo' },
+  });
+
+  let establishment = await prisma.establishment.findFirst({ where: { ownerId: user.id } });
+  if (!establishment) {
+    establishment = await prisma.establishment.create({
+      data: { name: 'Estancia Demo', country: 'Argentina', ownerId: user.id },
+    });
+  }
+  const establishmentId = establishment.id;
+
   // --- Locations (potreros / corrales) ---
   const potreroNorte = await prisma.location.upsert({
-    where: { name: 'Potrero Norte' },
+    where: { establishmentId_name: { establishmentId, name: 'Potrero Norte' } },
     update: {},
-    create: { name: 'Potrero Norte', type: LocationType.PASTURE, capacity: 50, areaHectares: 12.5 },
+    create: {
+      establishmentId,
+      name: 'Potrero Norte',
+      type: LocationType.PASTURE,
+      capacity: 50,
+      areaHectares: 12.5,
+    },
   });
 
   await prisma.location.upsert({
-    where: { name: 'Corral Sanitario' },
+    where: { establishmentId_name: { establishmentId, name: 'Corral Sanitario' } },
     update: {},
-    create: { name: 'Corral Sanitario', type: LocationType.QUARANTINE_AREA, capacity: 10 },
+    create: {
+      establishmentId,
+      name: 'Corral Sanitario',
+      type: LocationType.QUARANTINE_AREA,
+      capacity: 10,
+    },
   });
 
   // --- Animals with weight history ---
@@ -31,9 +64,10 @@ async function main(): Promise<void> {
 
   for (const a of animals) {
     const animal = await prisma.animal.upsert({
-      where: { tagId: a.tagId },
+      where: { establishmentId_tagId: { establishmentId, tagId: a.tagId } },
       update: {},
       create: {
+        establishmentId,
         tagId: a.tagId,
         species: Species.BOVINE,
         breed: a.breed,

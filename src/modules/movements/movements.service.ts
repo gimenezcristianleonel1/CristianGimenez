@@ -25,9 +25,13 @@ export class MovementsService {
     @Inject(EVENT_PUBLISHER) private readonly events: IEventPublisher,
   ) {}
 
-  async moveAnimal(animalId: string, dto: CreateMovementDto): Promise<AnimalMovement> {
+  async moveAnimal(
+    establishmentId: string,
+    animalId: string,
+    dto: CreateMovementDto,
+  ): Promise<AnimalMovement> {
     const animal = await this.animals.findById(animalId);
-    if (!animal) {
+    if (!animal || animal.establishmentId !== establishmentId) {
       throw new NotFoundException(`Animal ${animalId} not found`);
     }
     if (NON_MOVABLE.includes(animal.status)) {
@@ -40,7 +44,7 @@ export class MovementsService {
     }
 
     const destination = await this.locations.findById(dto.toLocationId);
-    if (!destination) {
+    if (!destination || destination.establishmentId !== establishmentId) {
       throw new BadRequestException(`Destination location ${dto.toLocationId} does not exist`);
     }
     if (destination.capacity !== null) {
@@ -77,9 +81,9 @@ export class MovementsService {
     return movement;
   }
 
-  async findForAnimal(animalId: string): Promise<AnimalMovement[]> {
+  async findForAnimal(establishmentId: string, animalId: string): Promise<AnimalMovement[]> {
     const animal = await this.animals.findById(animalId);
-    if (!animal) {
+    if (!animal || animal.establishmentId !== establishmentId) {
       throw new NotFoundException(`Animal ${animalId} not found`);
     }
     return this.repo.findByAnimal(animalId);
