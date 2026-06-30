@@ -34,18 +34,24 @@ async function bootstrap(): Promise<void> {
       .setTitle('Livestock Management API')
       .setDescription(
         'Sistema de Gestión Ganadera: trazabilidad animal, sanidad, ' +
-          'movimientos de potrero y bases de IA predictiva.',
+          'movimientos de potrero y bases de IA predictiva.\n\n' +
+          '**Módulos:** Inventario Animal · Sanidad · Ubicaciones · Movimientos.\n' +
+          '**Arquitectura:** Clean/Layered + EDA (Outbox) + PredictiveEngine.',
       )
       .setVersion('0.1.0')
-      .addTag('Health')
-      .addTag('Animals')
-      .addTag('Locations')
-      .addTag('Sanidad')
-      .addTag('Movements')
+      .setLicense('MIT', 'https://opensource.org/licenses/MIT')
+      .addTag('Health', 'Liveness y conectividad de la base de datos')
+      .addTag('Animals', 'Inventario animal, genealogía, pesajes y proyección de GDP')
+      .addTag('Locations', 'Potreros, corrales y lotes (capacidad / ocupación)')
+      .addTag('Sanidad', 'Eventos sanitarios y períodos de carencia')
+      .addTag('Movements', 'Traslados de animales entre ubicaciones')
       .build();
 
     const document = SwaggerModule.createDocument(app, swaggerConfig);
-    SwaggerModule.setup(`${apiPrefix}/${swaggerPath}`, app, document);
+    SwaggerModule.setup(`${apiPrefix}/${swaggerPath}`, app, document, {
+      customSiteTitle: 'Livestock Management API · Docs',
+      swaggerOptions: { persistAuthorization: true, tagsSorter: 'alpha' },
+    });
   }
 
   await app.listen(port);

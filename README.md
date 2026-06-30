@@ -5,8 +5,8 @@ API REST modular para la gestión integral de ganado: **trazabilidad animal**,
 Construido con una arquitectura limpia, orientada a eventos y preparada para escalar
 hacia microservicios, telemetría IoT y pipelines de Machine Learning.
 
-> Estado: **MVP en construcción incremental.** Este repositorio se desarrolla por pasos.
-> **Pasos completados: 1 (Config) · 2 (Modelado) · 3 (Inventario Animal) · 4 (Sanidad + Movimientos).**
+> Estado: **MVP COMPLETO.** Los 5 pasos del plan están implementados, probados y documentados.
+> Pasos: 1 (Config) · 2 (Modelado) · 3 (Inventario Animal) · 4 (Sanidad + Movimientos) · 5 (Swagger + Tests).
 
 ---
 
@@ -198,6 +198,28 @@ npm run start:dev
 
 ---
 
+## 🧪 Pruebas (Paso 5)
+
+**22 pruebas unitarias** sobre la lógica de negocio crítica (sin necesidad de base de
+datos: repositorios y publicadores mockeados).
+
+```bash
+npm test
+```
+
+| Suite | Cubre |
+|-------|-------|
+| `rule-based-predictive.engine.spec` | **Cálculo de GDP** (regresión lineal exacta), proyección 30/60/90, casos borde (serie vacía, 1 muestra, pendiente negativa) |
+| `animals.service.spec` | Transiciones de estado, **bloqueo de venta en carencia**, caravana única, 404 |
+| `sanitary.service.spec` | **Cálculo de `withdrawalUntil`**, medicamento obligatorio, estado de carencia |
+| `movements.service.spec` | Capacidad de destino, no-misma-ubicación, animales terminales |
+
+## 📖 Documentación de la API (Swagger / OpenAPI)
+
+Especificación **OpenAPI 3.0** autogenerada desde los decoradores + introspección de
+comentarios. Disponible en `http://localhost:3000/api/v1/docs` (UI) y
+`.../docs-json` (JSON). 11 rutas, 5 tags, 8 esquemas DTO.
+
 ## 🧪 Scripts útiles
 
 | Comando | Descripción |
@@ -217,4 +239,11 @@ npm run start:dev
 - [x] **Paso 2** — Modelado de datos (schema Prisma + migraciones, series temporales, Outbox)
 - [x] **Paso 3** — Core: CRUD de Inventario Animal + validaciones + GDP/proyección + eventos
 - [x] **Paso 4** — Sanidad (Módulo 2) + Ubicaciones y Movimientos (Módulo 3)
-- [ ] **Paso 5** — Documentación Swagger completa + pruebas unitarias (GDP, alertas)
+- [x] **Paso 5** — Documentación Swagger/OpenAPI + 22 pruebas unitarias (GDP, carencia, transiciones)
+
+### 🔭 Siguientes pasos (post-MVP)
+- Relay del Outbox a un broker (Kafka/RabbitMQ) + workers de proyección/alertas.
+- Alerta predictiva de bajo rendimiento por lote (GDP < 20% del promedio del potrero).
+- Autenticación/Autorización (JWT + roles) y multi-tenant (establecimientos).
+- Ingesta de telemetría IoT (caravanas/collares) hacia `metadata` y series temporales.
+- Motor de IA real (Scikit-Learn/TensorFlow/LLM) detrás de `PredictiveEngine`.
