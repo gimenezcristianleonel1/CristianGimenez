@@ -33,5 +33,5 @@
       "@shared/*": ["src/shared/*"]
     }
   },
-  "exclude": ["node_modules", "dist", "web"]
+  "exclude": ["node_modules", "dist", "web", "web/**"]
 }

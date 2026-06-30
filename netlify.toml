@@ -1,0 +1,35 @@
+# ============================================================
+#  Netlify - despliega ÚNICAMENTE el frontend (carpeta /web).
+#  El backend (NestJS) NO se construye acá; va en otro servicio.
+# ============================================================
+
+[build]
+  # Base directory: Netlify entra a /web antes de instalar y construir,
+  # por lo que el compilador de NestJS de la raíz nunca se ejecuta.
+  base = "web"
+  # Instala dependencias y construye la PWA (Vite).
+  command = "npm install && npm run build"
+  # Carpeta de salida de Vite, relativa al base directory (web/dist).
+  publish = "dist"
+
+[build.environment]
+  # Vite 5 requiere Node 18+.
+  NODE_VERSION = "20"
+  # Evita que npm falle el build por warnings de peers.
+  NPM_FLAGS = "--no-audit --no-fund"
+
+# SPA fallback: React Router maneja las rutas en el cliente, así que
+# cualquier ruta desconocida debe servir index.html (200, no 404).
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
+
+# ------------------------------------------------------------
+#  IMPORTANTE: definí estas variables en Netlify
+#  (Site settings -> Environment variables), NO acá:
+#    VITE_API_URL            -> URL pública de tu backend (con /api/v1)
+#    VITE_GOOGLE_CLIENT_ID   -> OAuth Client ID (Web) de Google
+#  Recordá agregar el dominio de Netlify a los "Authorized JavaScript
+#  origins" del cliente OAuth en Google Cloud Console.
+# ------------------------------------------------------------
