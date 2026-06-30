@@ -1,0 +1,17 @@
+// ============================================================
+//  Livestock Management System - Prisma Schema
+// ------------------------------------------------------------
+//  Paso 1: solo se configura la conexión (datasource + generator).
+//  Los modelos (Animal, WeightHistory, HealthRecord, Location,
+//  AnimalMovement, OutboxEvent...) se añaden en el Paso 2.
+// ============================================================
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
