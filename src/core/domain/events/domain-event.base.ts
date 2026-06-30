@@ -4,23 +4,25 @@ import { randomUUID } from 'node:crypto';
  * Base contract for every Domain Event in the system.
  *
  * A Domain Event is an immutable fact describing something relevant that
- * already happened in the domain (e.g. "AnimalWeighed", "AnimalTreated").
+ * already happened in the domain (e.g. "AnimalRegistered", "AnimalWeighed").
  * Events are the backbone of the Event-Driven Architecture: today they are
- * dispatched in-process, but the same payload can later be persisted in an
- * Outbox table and relayed to a message broker (Kafka/RabbitMQ), IoT
+ * persisted to a transactional Outbox and dispatched in-process, but the same
+ * payload can later be relayed to a message broker (Kafka/RabbitMQ), IoT
  * pipelines or ML feature stores WITHOUT touching the core domain logic.
  */
-export interface IDomainEvent {
-  /** Unique identifier of this specific event occurrence. */
+export interface IDomainEvent<TPayload extends Record<string, unknown> = Record<string, unknown>> {
+  /** Unique identifier of this specific event occurrence (idempotency key). */
   readonly eventId: string;
-  /** Stable, versioned name, e.g. "animal.weighed.v1". Used for routing. */
+  /** Stable, versioned name, e.g. "animal.registered.v1". Used for routing. */
   readonly eventName: string;
-  /** Moment the fact occurred (UTC). */
-  readonly occurredAt: Date;
+  /** Type of the aggregate the event belongs to, e.g. "Animal". */
+  readonly aggregateType: string;
   /** Identifier of the aggregate the event belongs to (e.g. animal id). */
   readonly aggregateId: string;
+  /** Moment the fact occurred (UTC). */
+  readonly occurredAt: Date;
   /** Serialisable, schema-stable payload of the event. */
-  readonly payload: Readonly<Record<string, unknown>>;
+  readonly payload: Readonly<TPayload>;
 }
 
 /**
@@ -28,13 +30,14 @@ export interface IDomainEvent {
  * Concrete events extend it and expose a strongly-typed payload.
  */
 export abstract class DomainEvent<TPayload extends Record<string, unknown>>
-  implements IDomainEvent
+  implements IDomainEvent<TPayload>
 {
   public readonly eventId: string;
   public readonly occurredAt: Date;
 
   protected constructor(
     public readonly eventName: string,
+    public readonly aggregateType: string,
     public readonly aggregateId: string,
     public readonly payload: Readonly<TPayload>,
   ) {

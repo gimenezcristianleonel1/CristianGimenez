@@ -6,7 +6,7 @@ Construido con una arquitectura limpia, orientada a eventos y preparada para esc
 hacia microservicios, telemetría IoT y pipelines de Machine Learning.
 
 > Estado: **MVP en construcción incremental.** Este repositorio se desarrolla por pasos.
-> **Pasos completados: Paso 1 (Configuración) · Paso 2 (Modelado de Datos).**
+> **Pasos completados: Paso 1 (Configuración) · Paso 2 (Modelado) · Paso 3 (Core Inventario Animal).**
 
 ---
 
@@ -89,6 +89,44 @@ en [`prisma/seed.ts`](./prisma/seed.ts).
 
 ---
 
+## 🐮 Módulo 1 — Inventario Animal (Paso 3)
+
+CRUD completo del agregado `Animal` con validaciones de negocio, historial de
+pesajes (serie temporal) e inteligencia de proyección de peso.
+
+### Endpoints (`/api/v1/animals`)
+
+| Método | Ruta | Descripción |
+|--------|------|-------------|
+| `POST` | `/animals` | Registrar animal |
+| `GET` | `/animals` | Listar (filtros: `species`, `status`, `locationId` + paginación) |
+| `GET` | `/animals/:id` | Detalle con genealogía y últimos pesajes |
+| `PATCH` | `/animals/:id` | Actualizar datos mutables |
+| `DELETE` | `/animals/:id` | Eliminar |
+| `PATCH` | `/animals/:id/status` | Cambiar estado (valida transición + carencia) |
+| `POST` | `/animals/:id/weights` | Registrar pesaje (append-only) |
+| `GET` | `/animals/:id/weights` | Histórico de pesajes |
+| `GET` | `/animals/:id/weights/projection` | **GDP + proyección 30/60/90 días** |
+
+### Validaciones de negocio
+- Caravana (`tagId`) única → `409`.
+- `birthDate` / `measuredAt` no pueden ser futuras → `400`.
+- Peso `> 0`.
+- Madre/padre deben existir y tener el sexo correcto; un animal no puede ser su propio padre/madre.
+- Ubicación debe existir y respetar su **capacidad** (anti-sobrepastoreo) → `409`.
+- **Transiciones de estado** controladas (`SOLD`/`DECEASED` son terminales).
+- **Regla predictiva de inocuidad:** no se puede marcar `READY_FOR_SALE`/`SOLD`
+  un animal dentro de un **período de carencia** activo → `409`.
+
+### Inteligencia (Sección C)
+- `PredictiveEngine` (token DI) con implementación `rule-based-linear-v1`:
+  estima la **GDP** por regresión lineal sobre la serie de pesajes y **proyecta**
+  el peso a 30/60/90 días con un nivel de confianza.
+- Cada cambio de estado emite un **Domain Event** persistido en el **Outbox**
+  dentro de la misma transacción.
+
+---
+
 ## 🚀 Puesta en Marcha (Desarrollo Local)
 
 ### 1. Requisitos
@@ -147,6 +185,6 @@ npm run start:dev
 
 - [x] **Paso 1** — Inicialización y configuración (scaffolding, ORM, EDA + IA seams)
 - [x] **Paso 2** — Modelado de datos (schema Prisma + migraciones, series temporales, Outbox)
-- [ ] **Paso 3** — Core: CRUD de Inventario Animal + validaciones de negocio
+- [x] **Paso 3** — Core: CRUD de Inventario Animal + validaciones + GDP/proyección + eventos
 - [ ] **Paso 4** — Endpoints sanitarios y de movimiento de potreros
 - [ ] **Paso 5** — Documentación Swagger completa + pruebas unitarias (GDP, alertas)

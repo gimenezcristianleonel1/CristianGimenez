@@ -4,6 +4,9 @@ import { EventEmitterModule } from '@nestjs/event-emitter';
 import configuration from '@infrastructure/config/configuration';
 import { envValidationSchema } from '@infrastructure/config/env.validation';
 import { PrismaModule } from '@infrastructure/database/prisma.module';
+import { EventsModule } from '@infrastructure/events/events.module';
+import { AiModule } from '@modules/ai/ai.module';
+import { AnimalsModule } from '@modules/animals/animals.module';
 import { HealthModule } from '@modules/health/health.module';
 
 @Module({
@@ -21,9 +24,12 @@ import { HealthModule } from '@modules/health/health.module';
 
     // Infrastructure
     PrismaModule,
+    EventsModule,
+    AiModule,
 
-    // Feature modules (Animals, Health, Locations added in later steps)
+    // Feature modules (Sanidad y Ubicaciones se añaden en el Paso 4)
     HealthModule,
+    AnimalsModule,
   ],
 })
 export class AppModule {}

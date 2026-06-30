@@ -38,6 +38,7 @@ async function bootstrap(): Promise<void> {
       )
       .setVersion('0.1.0')
       .addTag('Health')
+      .addTag('Animals')
       .build();
 
     const document = SwaggerModule.createDocument(app, swaggerConfig);
