@@ -8,6 +8,9 @@ import { EventsModule } from '@infrastructure/events/events.module';
 import { AiModule } from '@modules/ai/ai.module';
 import { AnimalsModule } from '@modules/animals/animals.module';
 import { HealthModule } from '@modules/health/health.module';
+import { LocationsModule } from '@modules/locations/locations.module';
+import { MovementsModule } from '@modules/movements/movements.module';
+import { SanitaryModule } from '@modules/sanitary/sanitary.module';
 
 @Module({
   imports: [
@@ -27,9 +30,12 @@ import { HealthModule } from '@modules/health/health.module';
     EventsModule,
     AiModule,
 
-    // Feature modules (Sanidad y Ubicaciones se añaden en el Paso 4)
+    // Feature modules
     HealthModule,
     AnimalsModule,
+    LocationsModule,
+    SanitaryModule,
+    MovementsModule,
   ],
 })
 export class AppModule {}

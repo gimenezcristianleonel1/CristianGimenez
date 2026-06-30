@@ -6,7 +6,7 @@ Construido con una arquitectura limpia, orientada a eventos y preparada para esc
 hacia microservicios, telemetría IoT y pipelines de Machine Learning.
 
 > Estado: **MVP en construcción incremental.** Este repositorio se desarrolla por pasos.
-> **Pasos completados: Paso 1 (Configuración) · Paso 2 (Modelado) · Paso 3 (Core Inventario Animal).**
+> **Pasos completados: 1 (Config) · 2 (Modelado) · 3 (Inventario Animal) · 4 (Sanidad + Movimientos).**
 
 ---
 
@@ -127,6 +127,36 @@ pesajes (serie temporal) e inteligencia de proyección de peso.
 
 ---
 
+## 🩺 Módulo 2 — Sanidad · 📍 Módulo 3 — Ubicaciones y Movimientos (Paso 4)
+
+### Sanidad (`/api/v1/animals/:animalId/health`)
+| Método | Ruta | Descripción |
+|--------|------|-------------|
+| `POST` | `.../health` | Registrar evento sanitario (vacuna, desparasitación, tratamiento, cirugía) |
+| `GET` | `.../health` | Historial sanitario (append-only) |
+| `GET` | `.../health/withdrawal-status` | Estado de carencia (apto para consumo/venta) |
+
+- `withdrawalUntil` se **calcula** (`appliedAt + withdrawalDays`) y se persiste.
+- `medication` es obligatorio para `VACCINATION`, `DEWORMING` y `TREATMENT`.
+- Emite `animal.health_event_recorded.v1` al Outbox.
+
+### Ubicaciones (`/api/v1/locations`)
+CRUD completo de potreros/corrales/lotes con control de **capacidad** y **ocupación**.
+No se puede reducir la capacidad por debajo de la ocupación ni borrar una ubicación con animales.
+
+### Movimientos (`/api/v1/animals/:animalId/movements`)
+| Método | Ruta | Descripción |
+|--------|------|-------------|
+| `POST` | `.../movements` | Trasladar animal a otra ubicación |
+| `GET` | `.../movements` | Historial de movimientos (append-only) |
+
+- **Transaccional:** crea el movimiento, actualiza `currentLocationId` del animal y
+  escribe el evento `animal.moved.v1` en el Outbox, todo en una sola transacción.
+- Valida capacidad del destino (anti-sobrepastoreo), que no sea la ubicación actual
+  y que el animal no esté en estado terminal (`SOLD`/`DECEASED`).
+
+---
+
 ## 🚀 Puesta en Marcha (Desarrollo Local)
 
 ### 1. Requisitos
@@ -186,5 +216,5 @@ npm run start:dev
 - [x] **Paso 1** — Inicialización y configuración (scaffolding, ORM, EDA + IA seams)
 - [x] **Paso 2** — Modelado de datos (schema Prisma + migraciones, series temporales, Outbox)
 - [x] **Paso 3** — Core: CRUD de Inventario Animal + validaciones + GDP/proyección + eventos
-- [ ] **Paso 4** — Endpoints sanitarios y de movimiento de potreros
+- [x] **Paso 4** — Sanidad (Módulo 2) + Ubicaciones y Movimientos (Módulo 3)
 - [ ] **Paso 5** — Documentación Swagger completa + pruebas unitarias (GDP, alertas)
