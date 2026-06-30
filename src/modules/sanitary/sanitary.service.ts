@@ -45,6 +45,7 @@ export class SanitaryService {
       withdrawalDays > 0 ? new Date(appliedAt.getTime() + withdrawalDays * MS_PER_DAY) : null;
 
     const data: Prisma.HealthRecordUncheckedCreateInput = {
+      ...(dto.id ? { id: dto.id } : {}),
       animalId,
       eventType: dto.eventType,
       medication: dto.medication ?? null,

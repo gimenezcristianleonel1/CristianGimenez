@@ -4,6 +4,11 @@ import { IsEnum, IsObject, IsOptional, IsString, IsUUID, MaxLength } from 'class
 import { IsNotFutureDate } from '@shared/validators/is-not-future-date.validator';
 
 export class CreateMovementDto {
+  @ApiPropertyOptional({ description: 'UUID generado por el cliente (idempotencia sync)' })
+  @IsOptional()
+  @IsUUID()
+  id?: string;
+
   @ApiProperty({ description: 'Ubicación destino (potrero/corral/lote)' })
   @IsUUID()
   toLocationId!: string;

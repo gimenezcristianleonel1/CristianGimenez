@@ -5,8 +5,17 @@ API REST modular para la gestión integral de ganado: **trazabilidad animal**,
 Construido con una arquitectura limpia, orientada a eventos y preparada para escalar
 hacia microservicios, telemetría IoT y pipelines de Machine Learning.
 
-> Estado: **MVP COMPLETO.** Los 5 pasos del plan están implementados, probados y documentados.
+> Estado: **MVP COMPLETO + PWA offline-first.** Backend (5 pasos) y frontend listos.
 > Pasos: 1 (Config) · 2 (Modelado) · 3 (Inventario Animal) · 4 (Sanidad + Movimientos) · 5 (Swagger + Tests).
+
+## 🗂️ Estructura del repositorio
+
+| Carpeta | Qué es |
+|---------|--------|
+| **`/` (raíz)** | **Backend** — API REST NestJS + Prisma + PostgreSQL (este README) |
+| **[`/web`](./web)** | **Frontend** — PWA offline-first (React + Vite) para trabajar en el campo sin internet |
+
+> 📱 **¿Buscás la app de campo (offline + sincronización)?** Ver [`web/README.md`](./web/README.md).
 
 ---
 

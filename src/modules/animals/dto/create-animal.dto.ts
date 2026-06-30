@@ -13,6 +13,13 @@ import {
 import { IsNotFutureDate } from '@shared/validators/is-not-future-date.validator';
 
 export class CreateAnimalDto {
+  @ApiPropertyOptional({
+    description: 'UUID generado por el cliente (idempotencia para sync offline)',
+  })
+  @IsOptional()
+  @IsUUID()
+  id?: string;
+
   @ApiProperty({ example: 'AR-0001', description: 'Caravana / arete único del animal' })
   @IsString()
   @IsNotEmpty()

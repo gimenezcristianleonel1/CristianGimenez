@@ -14,6 +14,14 @@ async function bootstrap(): Promise<void> {
 
   app.setGlobalPrefix(apiPrefix);
 
+  // CORS so the offline-first PWA (served from another origin) can call the API.
+  const corsOrigin = config.get<string>('corsOrigin', '*');
+  app.enableCors({
+    origin: corsOrigin === '*' ? true : corsOrigin.split(','),
+    methods: ['GET', 'POST', 'PATCH', 'PUT', 'DELETE', 'OPTIONS'],
+    credentials: false,
+  });
+
   // Strict, whitelisted input validation for every endpoint.
   app.useGlobalPipes(
     new ValidationPipe({

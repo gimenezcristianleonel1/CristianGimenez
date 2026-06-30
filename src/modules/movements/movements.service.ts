@@ -55,6 +55,7 @@ export class MovementsService {
     const movedAt = dto.movedAt ? new Date(dto.movedAt) : new Date();
 
     const data: Prisma.AnimalMovementUncheckedCreateInput = {
+      ...(dto.id ? { id: dto.id } : {}),
       animalId,
       fromLocationId,
       toLocationId: dto.toLocationId,

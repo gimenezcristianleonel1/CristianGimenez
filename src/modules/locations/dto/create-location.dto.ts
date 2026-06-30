@@ -8,11 +8,17 @@ import {
   IsOptional,
   IsPositive,
   IsString,
+  IsUUID,
   MaxLength,
   Min,
 } from 'class-validator';
 
 export class CreateLocationDto {
+  @ApiPropertyOptional({ description: 'UUID generado por el cliente (idempotencia sync)' })
+  @IsOptional()
+  @IsUUID()
+  id?: string;
+
   @ApiProperty({ example: 'Potrero Norte', description: 'Nombre único de la ubicación' })
   @IsString()
   @IsNotEmpty()

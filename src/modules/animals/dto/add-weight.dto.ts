@@ -1,9 +1,14 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { WeightSource } from '@prisma/client';
-import { IsEnum, IsObject, IsOptional, IsPositive } from 'class-validator';
+import { IsEnum, IsObject, IsOptional, IsPositive, IsUUID } from 'class-validator';
 import { IsNotFutureDate } from '@shared/validators/is-not-future-date.validator';
 
 export class AddWeightDto {
+  @ApiPropertyOptional({ description: 'UUID generado por el cliente (idempotencia sync)' })
+  @IsOptional()
+  @IsUUID()
+  id?: string;
+
   @ApiProperty({ example: 180.5, description: 'Peso medido en kg (> 0)' })
   @IsPositive()
   weightKg!: number;

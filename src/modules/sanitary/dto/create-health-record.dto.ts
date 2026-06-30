@@ -6,12 +6,18 @@ import {
   IsObject,
   IsOptional,
   IsString,
+  IsUUID,
   MaxLength,
   Min,
 } from 'class-validator';
 import { IsNotFutureDate } from '@shared/validators/is-not-future-date.validator';
 
 export class CreateHealthRecordDto {
+  @ApiPropertyOptional({ description: 'UUID generado por el cliente (idempotencia sync)' })
+  @IsOptional()
+  @IsUUID()
+  id?: string;
+
   @ApiProperty({ enum: HealthEventType, example: HealthEventType.VACCINATION })
   @IsEnum(HealthEventType)
   eventType!: HealthEventType;

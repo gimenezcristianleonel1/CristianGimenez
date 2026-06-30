@@ -14,6 +14,7 @@ export class LocationsService {
       throw new ConflictException(`A location named "${dto.name}" already exists`);
     }
     const data: Prisma.LocationCreateInput = {
+      ...(dto.id ? { id: dto.id } : {}),
       name: dto.name,
       type: dto.type,
       capacity: dto.capacity ?? null,

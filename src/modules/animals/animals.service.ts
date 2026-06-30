@@ -60,9 +60,10 @@ export class AnimalsService {
     await this.assertParent(dto.fatherId, Sex.MALE, 'father');
     await this.assertLocationHasCapacity(dto.currentLocationId);
 
-    // Generate the id up-front so the Domain Event carries the real aggregate
-    // id and can be written to the outbox within the same insert transaction.
-    const id = randomUUID();
+    // Use the client-supplied id when present (idempotent offline sync),
+    // otherwise generate one. Having the id up-front lets the Domain Event
+    // carry the real aggregate id inside the same insert transaction.
+    const id = dto.id ?? randomUUID();
     const data: Prisma.AnimalCreateInput = {
       id,
       tagId: dto.tagId,
@@ -199,6 +200,7 @@ export class AnimalsService {
     const source = dto.source ?? WeightSource.MANUAL;
 
     const data: Prisma.WeightHistoryUncheckedCreateInput = {
+      ...(dto.id ? { id: dto.id } : {}),
       animalId: id,
       weightKg: new Prisma.Decimal(dto.weightKg),
       measuredAt,

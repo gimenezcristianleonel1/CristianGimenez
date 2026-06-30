@@ -1,0 +1,211 @@
+import { db } from './db';
+import { uuid } from '../lib/uuid';
+import type {
+  AnimalStatus,
+  HealthEventType,
+  LocationType,
+  MovementReason,
+  OutboxOp,
+  Sex,
+  Species,
+  WeightSource,
+} from '../lib/types';
+
+const DAY = 86_400_000;
+
+async function enqueue(op: Omit<OutboxOp, 'attempts' | 'createdAt'>): Promise<void> {
+  await db.outbox.add({ ...op, attempts: 0, createdAt: new Date().toISOString() });
+}
+
+export interface NewAnimalInput {
+  tagId: string;
+  species: Species;
+  breed: string;
+  sex: Sex;
+  birthDate: string;
+  initialWeightKg: number;
+  currentLocationId?: string | null;
+  metadata?: Record<string, unknown>;
+}
+
+/** Create an animal locally (optimistic) and queue it for sync. */
+export async function createAnimal(input: NewAnimalInput): Promise<string> {
+  const id = uuid();
+  await db.animals.add({
+    id,
+    tagId: input.tagId,
+    species: input.species,
+    breed: input.breed,
+    sex: input.sex,
+    birthDate: input.birthDate,
+    initialWeightKg: input.initialWeightKg,
+    status: 'ACTIVE',
+    currentLocationId: input.currentLocationId ?? null,
+    metadata: input.metadata ?? {},
+    _dirty: 1,
+  });
+  await enqueue({
+    id: uuid(),
+    kind: 'animal.create',
+    method: 'POST',
+    path: '/animals',
+    body: { id, ...input, currentLocationId: input.currentLocationId || undefined },
+    entityTable: 'animals',
+    entityId: id,
+  });
+  return id;
+}
+
+export async function changeAnimalStatus(animalId: string, status: AnimalStatus): Promise<void> {
+  await db.animals.update(animalId, { status, _dirty: 1 });
+  await enqueue({
+    id: uuid(),
+    kind: 'animal.status',
+    method: 'PATCH',
+    path: `/animals/${animalId}/status`,
+    body: { status },
+    entityTable: 'animals',
+    entityId: animalId,
+  });
+}
+
+export interface NewLocationInput {
+  name: string;
+  type: LocationType;
+  capacity?: number;
+  areaHectares?: number;
+  description?: string;
+}
+
+export async function createLocation(input: NewLocationInput): Promise<string> {
+  const id = uuid();
+  await db.locations.add({
+    id,
+    name: input.name,
+    type: input.type,
+    capacity: input.capacity ?? null,
+    areaHectares: input.areaHectares ?? null,
+    description: input.description ?? null,
+    _dirty: 1,
+  });
+  await enqueue({
+    id: uuid(),
+    kind: 'location.create',
+    method: 'POST',
+    path: '/locations',
+    body: { id, ...input },
+    entityTable: 'locations',
+    entityId: id,
+  });
+  return id;
+}
+
+export interface NewWeightInput {
+  weightKg: number;
+  measuredAt?: string;
+  source?: WeightSource;
+}
+
+export async function addWeight(animalId: string, input: NewWeightInput): Promise<string> {
+  const id = uuid();
+  const measuredAt = input.measuredAt ?? new Date().toISOString();
+  const source = input.source ?? 'MANUAL';
+  await db.weights.add({ id, animalId, weightKg: input.weightKg, measuredAt, source, _dirty: 1 });
+  await enqueue({
+    id: uuid(),
+    kind: 'weight.create',
+    method: 'POST',
+    path: `/animals/${animalId}/weights`,
+    body: { id, weightKg: input.weightKg, measuredAt, source },
+    entityTable: 'weights',
+    entityId: id,
+  });
+  return id;
+}
+
+export interface NewHealthInput {
+  eventType: HealthEventType;
+  medication?: string;
+  dosage?: string;
+  appliedAt?: string;
+  withdrawalDays?: number;
+  notes?: string;
+}
+
+export async function addHealth(animalId: string, input: NewHealthInput): Promise<string> {
+  const id = uuid();
+  const appliedAt = input.appliedAt ?? new Date().toISOString();
+  const withdrawalDays = input.withdrawalDays ?? 0;
+  const withdrawalUntil =
+    withdrawalDays > 0 ? new Date(new Date(appliedAt).getTime() + withdrawalDays * DAY).toISOString() : null;
+  await db.health.add({
+    id,
+    animalId,
+    eventType: input.eventType,
+    medication: input.medication ?? null,
+    dosage: input.dosage ?? null,
+    appliedAt,
+    withdrawalDays,
+    withdrawalUntil,
+    _dirty: 1,
+  });
+  await enqueue({
+    id: uuid(),
+    kind: 'health.create',
+    method: 'POST',
+    path: `/animals/${animalId}/health`,
+    body: {
+      id,
+      eventType: input.eventType,
+      medication: input.medication || undefined,
+      dosage: input.dosage || undefined,
+      appliedAt,
+      withdrawalDays,
+      notes: input.notes || undefined,
+    },
+    entityTable: 'health',
+    entityId: id,
+  });
+  return id;
+}
+
+export interface NewMovementInput {
+  toLocationId: string;
+  reason?: MovementReason;
+  movedAt?: string;
+  notes?: string;
+}
+
+export async function moveAnimal(animalId: string, input: NewMovementInput): Promise<string> {
+  const id = uuid();
+  const movedAt = input.movedAt ?? new Date().toISOString();
+  const animal = await db.animals.get(animalId);
+  const fromLocationId = animal?.currentLocationId ?? null;
+  await db.movements.add({
+    id,
+    animalId,
+    fromLocationId,
+    toLocationId: input.toLocationId,
+    reason: input.reason ?? null,
+    movedAt,
+    _dirty: 1,
+  });
+  // Reflect the new location locally right away (optimistic).
+  await db.animals.update(animalId, { currentLocationId: input.toLocationId, _dirty: 1 });
+  await enqueue({
+    id: uuid(),
+    kind: 'movement.create',
+    method: 'POST',
+    path: `/animals/${animalId}/movements`,
+    body: {
+      id,
+      toLocationId: input.toLocationId,
+      reason: input.reason || undefined,
+      movedAt,
+      notes: input.notes || undefined,
+    },
+    entityTable: 'movements',
+    entityId: id,
+  });
+  return id;
+}
