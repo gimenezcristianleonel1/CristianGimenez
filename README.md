@@ -55,6 +55,31 @@ rutas (salvo `/health`, `/auth/register`, `/auth/login` y `/auth/google`) exigen
 
 > 📱 **¿Buscás la app de campo (offline + sincronización)?** Ver [`web/README.md`](./web/README.md).
 
+## 🐳 Levantar todo con Docker (un solo comando)
+
+`docker-compose.yml` orquesta **PostgreSQL + Backend + Frontend**. Aplica las migraciones
+automáticamente al arrancar.
+
+```bash
+# (opcional) cp .env.example .env  y ajustá JWT_SECRET
+docker compose up -d --build
+```
+
+| Servicio | URL |
+|----------|-----|
+| Frontend (PWA) | http://localhost:8080 |
+| API | http://localhost:3000/api/v1 |
+| Swagger | http://localhost:3000/api/v1/docs |
+
+```bash
+docker compose logs -f api     # ver logs del backend
+docker compose down            # frenar (agregá -v para borrar la base)
+```
+
+Variables útiles (en `.env` de la raíz, todas opcionales con defaults):
+`JWT_SECRET`, `POSTGRES_PASSWORD`, `WEB_PORT`, `API_PORT`, `VITE_API_URL`,
+`GOOGLE_CLIENT_ID` / `VITE_GOOGLE_CLIENT_ID` (sólo si querés login con Google).
+
 ---
 
 ## 🧱 Stack Tecnológico

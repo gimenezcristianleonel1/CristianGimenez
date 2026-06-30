@@ -1,0 +1,13 @@
+# Backend image: excluye lo que no debe entrar al contexto de build.
+node_modules
+dist
+coverage
+web
+.git
+.github
+.env
+.env.*
+*.log
+npm-debug.log*
+/tmp
+engine-dl

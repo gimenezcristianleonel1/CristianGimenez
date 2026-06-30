@@ -1,5 +1,9 @@
-# Local development PostgreSQL instance.
-# Start with: docker compose up -d
+# ============================================================
+#  Stack completo: PostgreSQL + Backend (NestJS) + Frontend (PWA)
+#  Levantar todo con:   docker compose up -d --build
+#  Frontend:  http://localhost:8080
+#  API:       http://localhost:3000/api/v1   (Swagger en /api/v1/docs)
+# ============================================================
 services:
   postgres:
     image: postgres:16-alpine
@@ -18,6 +22,42 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+
+  api:
+    build:
+      context: .
+    container_name: livestock-api
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      API_PREFIX: api/v1
+      DATABASE_URL: postgresql://${POSTGRES_USER:-ganadero}:${POSTGRES_PASSWORD:-ganadero}@postgres:5432/${POSTGRES_DB:-livestock}?schema=public
+      # Cambiá este secreto en producción.
+      JWT_SECRET: ${JWT_SECRET:-cambia-esto-por-un-secreto-largo-y-aleatorio}
+      JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-30d}
+      CORS_ORIGIN: ${CORS_ORIGIN:-*}
+      # Opcional: solo si querés habilitar el login con Google.
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+    ports:
+      - '${API_PORT:-3000}:3000'
+
+  web:
+    build:
+      context: ./web
+      args:
+        # El navegador llama a la API en localhost:3000 (puerto publicado por 'api').
+        VITE_API_URL: ${VITE_API_URL:-http://localhost:3000/api/v1}
+        VITE_GOOGLE_CLIENT_ID: ${VITE_GOOGLE_CLIENT_ID:-}
+    container_name: livestock-web
+    restart: unless-stopped
+    depends_on:
+      - api
+    ports:
+      - '${WEB_PORT:-8080}:80'
 
 volumes:
   livestock_pgdata:
