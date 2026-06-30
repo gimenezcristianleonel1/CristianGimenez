@@ -1,4 +1,5 @@
 import {
+  ConflictException,
   Injectable,
   Logger,
   NotFoundException,
@@ -9,9 +10,14 @@ import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import { Establishment, Prisma, User } from '@prisma/client';
 import { OAuth2Client } from 'google-auth-library';
+import * as bcrypt from 'bcryptjs';
 import { PrismaService } from '@infrastructure/database/prisma.service';
 import { UpdateEstablishmentDto } from './dto/update-establishment.dto';
+import { RegisterDto } from './dto/register.dto';
+import { LoginDto } from './dto/login.dto';
 import { JwtPayload } from './auth.types';
+
+const BCRYPT_ROUNDS = 10;
 
 export interface PublicUser {
   id: string;
@@ -98,6 +104,65 @@ export class AuthService {
       user: this.toPublicUser(user),
       establishment,
       isNewUser,
+    };
+  }
+
+  /**
+   * Registers a new user with email + password (free, no external provider)
+   * and provisions their establishment.
+   */
+  async register(dto: RegisterDto): Promise<AuthResult> {
+    const email = dto.email.toLowerCase().trim();
+    if (await this.prisma.user.findUnique({ where: { email } })) {
+      throw new ConflictException('Ya existe una cuenta con ese email');
+    }
+    const passwordHash = await bcrypt.hash(dto.password, BCRYPT_ROUNDS);
+
+    const { user, establishment } = await this.prisma.$transaction(async (tx) => {
+      const user = await tx.user.create({
+        data: { email, name: dto.name ?? null, passwordHash },
+      });
+      const establishment = await tx.establishment.create({
+        data: {
+          name: dto.establishmentName?.trim() || `Establecimiento de ${dto.name ?? email}`,
+          ownerId: user.id,
+        },
+      });
+      return { user, establishment };
+    });
+
+    this.logger.log(`New user registered (email): ${email}`);
+    return {
+      accessToken: await this.signToken(user, establishment.id),
+      user: this.toPublicUser(user),
+      establishment,
+      isNewUser: true,
+    };
+  }
+
+  /** Authenticates an email + password user and issues a JWT. */
+  async login(dto: LoginDto): Promise<AuthResult> {
+    const email = dto.email.toLowerCase().trim();
+    const user = await this.prisma.user.findUnique({ where: { email } });
+    // Same generic error whether the user is missing, has no password (Google
+    // account) or the password is wrong — avoids leaking which emails exist.
+    if (!user?.passwordHash || !(await bcrypt.compare(dto.password, user.passwordHash))) {
+      throw new UnauthorizedException('Email o contraseña incorrectos');
+    }
+
+    const establishment = await this.prisma.establishment.findFirst({
+      where: { ownerId: user.id },
+      orderBy: { createdAt: 'asc' },
+    });
+    if (!establishment) {
+      throw new NotFoundException('El usuario no tiene un establecimiento asociado');
+    }
+
+    return {
+      accessToken: await this.signToken(user, establishment.id),
+      user: this.toPublicUser(user),
+      establishment,
+      isNewUser: false,
     };
   }
 

@@ -97,11 +97,14 @@ enum OutboxStatus {
 
 model User {
   id       String  @id @default(uuid()) @db.Uuid
-  /// Identificador estable de Google (claim `sub`).
-  googleId String  @unique @map("google_id")
+  /// Identificador estable de Google (claim `sub`). Opcional: los usuarios
+  /// pueden registrarse con email + contraseña en lugar de Google.
+  googleId String? @unique @map("google_id")
   email    String  @unique
   name     String?
   picture  String?
+  /// Hash bcrypt de la contraseña (solo para usuarios de email/contraseña).
+  passwordHash String? @map("password_hash")
 
   metadata Json @default("{}") @db.JsonB
 

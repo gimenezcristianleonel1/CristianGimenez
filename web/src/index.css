@@ -355,6 +355,10 @@ textarea {
   margin: 20px 0 8px;
   min-height: 44px;
 }
+.login-or {
+  margin: 14px 0 10px;
+  font-size: 13px;
+}
 .login-hint {
   font-size: 12px;
   margin-top: 16px;

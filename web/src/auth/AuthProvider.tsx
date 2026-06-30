@@ -25,11 +25,22 @@ interface LoginResponse {
   isNewUser: boolean;
 }
 
+export interface RegisterInput {
+  email: string;
+  password: string;
+  name?: string;
+  establishmentName?: string;
+}
+
 interface AuthContextValue {
   user: AuthUser | null;
   establishment: Establishment | null;
   isAuthenticated: boolean;
-  /** Exchanges a Google ID token for our session. */
+  /** Registers a new email + password account. */
+  register: (input: RegisterInput) => Promise<void>;
+  /** Logs in with email + password. */
+  loginWithEmail: (email: string, password: string) => Promise<void>;
+  /** Exchanges a Google ID token for our session (optional). */
   loginWithGoogle: (idToken: string) => Promise<void>;
   logout: () => void;
 }
@@ -44,27 +55,48 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setSession(null);
   }, []);
 
-  const loginWithGoogle = useCallback(async (idToken: string) => {
-    const res = await api<LoginResponse>('/auth/google', {
-      method: 'POST',
-      body: { idToken },
-    });
+  // Persists a successful login response and wipes cached data when a
+  // different establishment signs in on this device (anti cross-tenant leak).
+  const applyLogin = useCallback(async (res: LoginResponse) => {
     const next: Session = {
       token: res.accessToken,
       user: res.user,
       establishment: res.establishment,
     };
-
-    // If a different establishment logs in on this device, drop cached data
-    // so tenants never see each other's records.
     const previous = getStoredSession();
     if (previous && previous.establishment.id !== next.establishment.id) {
       await clearAllData();
     }
-
     saveSession(next);
     setSession(next);
   }, []);
+
+  const register = useCallback(
+    async (input: RegisterInput) => {
+      const res = await api<LoginResponse>('/auth/register', { method: 'POST', body: input });
+      await applyLogin(res);
+    },
+    [applyLogin],
+  );
+
+  const loginWithEmail = useCallback(
+    async (email: string, password: string) => {
+      const res = await api<LoginResponse>('/auth/login', {
+        method: 'POST',
+        body: { email, password },
+      });
+      await applyLogin(res);
+    },
+    [applyLogin],
+  );
+
+  const loginWithGoogle = useCallback(
+    async (idToken: string) => {
+      const res = await api<LoginResponse>('/auth/google', { method: 'POST', body: { idToken } });
+      await applyLogin(res);
+    },
+    [applyLogin],
+  );
 
   // The API client fires this when a token is rejected (expired/invalid).
   useEffect(() => {
@@ -79,6 +111,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         user: session?.user ?? null,
         establishment: session?.establishment ?? null,
         isAuthenticated: !!session,
+        register,
+        loginWithEmail,
         loginWithGoogle,
         logout,
       }}

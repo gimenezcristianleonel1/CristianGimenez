@@ -2,6 +2,8 @@ import { Body, Controller, Get, Patch, Post } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { AuthService } from './auth.service';
 import { GoogleLoginDto } from './dto/google-login.dto';
+import { RegisterDto } from './dto/register.dto';
+import { LoginDto } from './dto/login.dto';
 import { UpdateEstablishmentDto } from './dto/update-establishment.dto';
 import { Public } from './decorators/public.decorator';
 import { CurrentUser } from './decorators/current-user.decorator';
@@ -10,6 +12,20 @@ import { CurrentUser } from './decorators/current-user.decorator';
 @Controller('auth')
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
+
+  @Public()
+  @Post('register')
+  @ApiOperation({ summary: 'Registrarse con email y contraseña (gratis, sin proveedor externo)' })
+  register(@Body() dto: RegisterDto) {
+    return this.authService.register(dto);
+  }
+
+  @Public()
+  @Post('login')
+  @ApiOperation({ summary: 'Iniciar sesión con email y contraseña' })
+  login(@Body() dto: LoginDto) {
+    return this.authService.login(dto);
+  }
 
   @Public()
   @Post('google')
