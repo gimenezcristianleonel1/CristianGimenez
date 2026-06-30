@@ -6,7 +6,7 @@ Construido con una arquitectura limpia, orientada a eventos y preparada para esc
 hacia microservicios, telemetría IoT y pipelines de Machine Learning.
 
 > Estado: **MVP en construcción incremental.** Este repositorio se desarrolla por pasos.
-> **Paso actual completado: Paso 1 — Inicialización y Configuración.**
+> **Pasos completados: Paso 1 (Configuración) · Paso 2 (Modelado de Datos).**
 
 ---
 
@@ -60,6 +60,32 @@ src/
 - **Tipado estricto:** `strict`, `noImplicitAny`, `noUnusedLocals`, etc.
 - **Validación y errores centralizados:** `ValidationPipe` global con whitelist +
   `AllExceptionsFilter` con envelope de error estándar.
+
+---
+
+## 🗃️ Modelo de Datos (Paso 2)
+
+Esquema relacional en PostgreSQL diseñado para **trazabilidad**, **series temporales**
+e **ingesta futura de datos para IA**:
+
+| Tabla | Rol | Diseño |
+|-------|-----|--------|
+| `animals` | Agregado raíz de trazabilidad | Caravana única, genealogía (auto-relación madre/padre), ubicación actual, `metadata JSONB` |
+| `weight_history` | Histórico de pesajes | **Serie temporal append-only** (UPDATE bloqueado por trigger) |
+| `health_records` | Eventos sanitarios | **Append-only**; período de carencia (`withdrawal_until`) precalculado |
+| `locations` | Potreros / corrales / lotes | Capacidad (control de sobrepastoreo), tipo enum |
+| `animal_movements` | Traslados entre ubicaciones | **Append-only**, origen/destino |
+| `outbox_events` | **Patrón Outbox** | Persiste Domain Events en la misma transacción (EDA → brokers/IoT/ML) |
+
+**Principios aplicados:**
+- **Inmutabilidad real:** triggers PostgreSQL impiden `UPDATE` en las tablas de series
+  temporales (`weight_history`, `health_records`, `animal_movements`).
+- **Enums estrictos:** `Species`, `Sex`, `AnimalStatus`, `LocationType`, `HealthEventType`,
+  `WeightSource`, `MovementReason`, `OutboxStatus` → datos limpios para entrenamiento de IA.
+- **Enriquecimiento sin migraciones:** columna `metadata JSONB` en todas las tablas principales.
+
+Migraciones versionadas en [`prisma/migrations/`](./prisma/migrations). Datos de ejemplo
+en [`prisma/seed.ts`](./prisma/seed.ts).
 
 ---
 
@@ -120,7 +146,7 @@ npm run start:dev
 ## 🗺️ Roadmap de implementación
 
 - [x] **Paso 1** — Inicialización y configuración (scaffolding, ORM, EDA + IA seams)
-- [ ] **Paso 2** — Modelado de datos (schema Prisma + migraciones, series temporales)
+- [x] **Paso 2** — Modelado de datos (schema Prisma + migraciones, series temporales, Outbox)
 - [ ] **Paso 3** — Core: CRUD de Inventario Animal + validaciones de negocio
 - [ ] **Paso 4** — Endpoints sanitarios y de movimiento de potreros
 - [ ] **Paso 5** — Documentación Swagger completa + pruebas unitarias (GDP, alertas)

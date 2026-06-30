@@ -1,9 +1,15 @@
 // ============================================================
-//  Livestock Management System - Prisma Schema
+//  Livestock Management System - Prisma Schema (Paso 2)
 // ------------------------------------------------------------
-//  Paso 1: solo se configura la conexión (datasource + generator).
-//  Los modelos (Animal, WeightHistory, HealthRecord, Location,
-//  AnimalMovement, OutboxEvent...) se añaden en el Paso 2.
+//  Principios de diseño aplicados:
+//   * Series temporales / inmutabilidad: WeightHistory, HealthRecord
+//     y AnimalMovement son tablas append-only (insert + timestamp).
+//   * Enums estrictos: estados, especies, tipos de evento y de medicación
+//     se modelan como enums para evitar datos ruidosos (Data Readiness IA).
+//   * Enriquecimiento: cada tabla principal expone `metadata Json` (JSONB)
+//     para datos ambientales / de sensores futuros sin romper el esquema.
+//   * Outbox transaccional: OutboxEvent persiste los Domain Events en la
+//     misma transacción del cambio de estado (EDA escalable a brokers/IoT/ML).
 // ============================================================
 
 generator client {
@@ -15,3 +21,256 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+// ------------------------------------------------------------
+//  Enums (estandarización de datos)
+// ------------------------------------------------------------
+
+enum Species {
+  BOVINE
+  PORCINE
+  OVINE
+  CAPRINE
+  EQUINE
+  OTHER
+}
+
+enum Sex {
+  MALE
+  FEMALE
+}
+
+/// Ciclo de vida del animal. READY_FOR_SALE es un estado explícito para que
+/// las reglas de carencia puedan bloquear la transición a venta.
+enum AnimalStatus {
+  ACTIVE
+  QUARANTINE
+  READY_FOR_SALE
+  SOLD
+  DECEASED
+}
+
+enum LocationType {
+  PASTURE // Potrero
+  PEN // Corral
+  CORRAL
+  BARN // Establo
+  QUARANTINE_AREA
+  PADDOCK // Lote
+}
+
+enum HealthEventType {
+  VACCINATION
+  DEWORMING
+  TREATMENT
+  SURGERY
+  CHECKUP
+  OTHER
+}
+
+/// Origen del dato de pesaje: prepara la ingesta desde básculas / IoT.
+enum WeightSource {
+  MANUAL
+  SCALE
+  IOT_SENSOR
+  ESTIMATED
+}
+
+enum MovementReason {
+  ROTATION // Rotación de pastura
+  OVERGRAZING_PREVENTION // Evitar sobrepastoreo
+  MEDICAL // Aislamiento / tratamiento
+  WEANING // Destete
+  SALE_PREPARATION
+  REGROUPING
+  OTHER
+}
+
+enum OutboxStatus {
+  PENDING
+  PROCESSED
+  FAILED
+}
+
+// ------------------------------------------------------------
+//  Animal (agregado raíz de trazabilidad)
+// ------------------------------------------------------------
+
+model Animal {
+  id     String       @id @default(uuid()) @db.Uuid
+  /// Caravana / Arete: identificador único físico del animal.
+  tagId  String       @unique @map("tag_id")
+  species Species
+  breed  String
+  sex    Sex
+  birthDate      DateTime @map("birth_date") @db.Date
+  /// Peso al alta (kg). El histórico vive en WeightHistory.
+  initialWeightKg Decimal @map("initial_weight_kg") @db.Decimal(7, 2)
+  status AnimalStatus @default(ACTIVE)
+
+  // Genealogía (auto-relaciones opcionales)
+  motherId String? @map("mother_id") @db.Uuid
+  mother   Animal? @relation("Maternity", fields: [motherId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+  offspringAsMother Animal[] @relation("Maternity")
+
+  fatherId String? @map("father_id") @db.Uuid
+  father   Animal? @relation("Paternity", fields: [fatherId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+  offspringAsFather Animal[] @relation("Paternity")
+
+  // Ubicación actual (desnormalizada para consultas rápidas)
+  currentLocationId String?   @map("current_location_id") @db.Uuid
+  currentLocation   Location? @relation("CurrentResidents", fields: [currentLocationId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+
+  /// Metadatos de enriquecimiento (JSONB): genética, origen, sensores, etc.
+  metadata Json @default("{}") @db.JsonB
+
+  weightHistory WeightHistory[]
+  healthRecords HealthRecord[]
+  movements     AnimalMovement[]
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([status])
+  @@index([species])
+  @@index([currentLocationId])
+  @@index([motherId])
+  @@index([fatherId])
+  @@map("animals")
+}
+
+// ------------------------------------------------------------
+//  WeightHistory (serie temporal inmutable / append-only)
+// ------------------------------------------------------------
+
+model WeightHistory {
+  id       String @id @default(uuid()) @db.Uuid
+  animalId String @map("animal_id") @db.Uuid
+  animal   Animal @relation(fields: [animalId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  weightKg Decimal @map("weight_kg") @db.Decimal(7, 2)
+  /// Momento real del pesaje (clave de la serie temporal).
+  measuredAt DateTime @map("measured_at")
+  source     WeightSource @default(MANUAL)
+
+  /// Variables ambientales / lecturas de sensor en el momento del pesaje.
+  metadata Json @default("{}") @db.JsonB
+
+  /// Solo timestamp de inserción; los registros nunca se actualizan.
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([animalId, measuredAt])
+  @@map("weight_history")
+}
+
+// ------------------------------------------------------------
+//  HealthRecord (serie temporal inmutable / append-only)
+// ------------------------------------------------------------
+
+model HealthRecord {
+  id       String @id @default(uuid()) @db.Uuid
+  animalId String @map("animal_id") @db.Uuid
+  animal   Animal @relation(fields: [animalId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  eventType  HealthEventType @map("event_type")
+  medication String?
+  dosage     String?
+  appliedAt  DateTime        @map("applied_at")
+
+  /// Período de carencia en días (tiempo de espera antes de consumo).
+  withdrawalDays Int @default(0) @map("withdrawal_days")
+  /// Fecha hasta la que el animal NO puede ir a consumo/venta.
+  /// Se calcula en el servicio (appliedAt + withdrawalDays) y se persiste
+  /// para consultas eficientes de "listo para venta".
+  withdrawalUntil DateTime? @map("withdrawal_until")
+
+  notes String?
+
+  /// Diagnóstico estructurado / lecturas adicionales (JSONB).
+  metadata Json @default("{}") @db.JsonB
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([animalId, appliedAt])
+  @@index([withdrawalUntil])
+  @@index([eventType])
+  @@map("health_records")
+}
+
+// ------------------------------------------------------------
+//  Location (Potreros / Corrales / Lotes)
+// ------------------------------------------------------------
+
+model Location {
+  id   String       @id @default(uuid()) @db.Uuid
+  name String       @unique
+  type LocationType
+
+  /// Capacidad máxima de animales (control de sobrepastoreo).
+  capacity     Int?
+  areaHectares Decimal? @map("area_hectares") @db.Decimal(8, 2)
+  description  String?
+
+  metadata Json @default("{}") @db.JsonB
+
+  currentResidents Animal[]         @relation("CurrentResidents")
+  movementsFrom    AnimalMovement[] @relation("MovementFrom")
+  movementsTo      AnimalMovement[] @relation("MovementTo")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([type])
+  @@map("locations")
+}
+
+// ------------------------------------------------------------
+//  AnimalMovement (serie temporal inmutable de traslados)
+// ------------------------------------------------------------
+
+model AnimalMovement {
+  id       String @id @default(uuid()) @db.Uuid
+  animalId String @map("animal_id") @db.Uuid
+  animal   Animal @relation(fields: [animalId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  fromLocationId String?   @map("from_location_id") @db.Uuid
+  fromLocation   Location? @relation("MovementFrom", fields: [fromLocationId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+
+  toLocationId String   @map("to_location_id") @db.Uuid
+  toLocation   Location @relation("MovementTo", fields: [toLocationId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+
+  reason  MovementReason?
+  movedAt DateTime        @map("moved_at")
+  notes   String?
+
+  metadata Json @default("{}") @db.JsonB
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([animalId, movedAt])
+  @@index([toLocationId])
+  @@map("animal_movements")
+}
+
+// ------------------------------------------------------------
+//  OutboxEvent (Patrón Outbox transaccional para Domain Events)
+// ------------------------------------------------------------
+
+model OutboxEvent {
+  id            String       @id @default(uuid()) @db.Uuid
+  /// Id único de la ocurrencia del evento (idempotencia en consumidores).
+  eventId       String       @unique @map("event_id") @db.Uuid
+  eventName     String       @map("event_name")
+  aggregateType String       @map("aggregate_type")
+  aggregateId   String       @map("aggregate_id")
+  payload       Json         @db.JsonB
+  status        OutboxStatus @default(PENDING)
+  occurredAt    DateTime     @map("occurred_at")
+  processedAt   DateTime?    @map("processed_at")
+  attempts      Int          @default(0)
+  error         String?
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([status, occurredAt])
+  @@map("outbox_events")
+}
