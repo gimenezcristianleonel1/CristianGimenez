@@ -254,9 +254,10 @@ CRUD completo de potreros/corrales/lotes con control de **capacidad** y **ocupac
 No se puede reducir la capacidad por debajo de la ocupación ni borrar una ubicación con animales.
 En el **frontend** hay una pantalla de **Gestión de Potreros** (crear/editar/eliminar,
 offline-first) y en el listado de **Animales** un **filtro por potrero**. La ficha del
-potrero **lista los animales que contiene** y ofrece **acciones masivas**: mover a todos
-a otro potrero, o aplicar un **evento sanitario masivo** (ej. desparasitación) a todo el
-lote — cada acción se encola por animal y se sincroniza sola.
+potrero **lista los animales que contiene**, permite **dar de alta un animal directamente
+ahí** (queda asignado a ese potrero) y ofrece **acciones masivas**: mover a todos a otro
+potrero, o aplicar un **evento sanitario masivo** (ej. desparasitación) a todo el lote —
+cada acción se encola por animal y se sincroniza sola.
 
 ### Movimientos (`/api/v1/animals/:animalId/movements`)
 | Método | Ruta | Descripción |

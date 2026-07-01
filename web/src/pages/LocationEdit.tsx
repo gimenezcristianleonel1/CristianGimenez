@@ -5,12 +5,13 @@ import { db } from '../db/db';
 import {
   bulkHealthByLocation,
   bulkMoveByLocation,
+  createAnimal,
   deleteLocation,
   updateLocation,
   type LocationEditInput,
 } from '../db/repository';
-import { healthEventLabel, locationTypeLabel, speciesLabel } from '../lib/labels';
-import type { Animal, HealthEventType, LocationRow, LocationType } from '../lib/types';
+import { healthEventLabel, locationTypeLabel, sexLabel, speciesLabel } from '../lib/labels';
+import type { Animal, HealthEventType, LocationRow, LocationType, Sex, Species } from '../lib/types';
 
 export default function LocationEdit() {
   const { id = '' } = useParams();
@@ -161,8 +162,10 @@ export default function LocationEdit() {
           <h2>Animales en este potrero ({residents.length})</h2>
         </div>
 
+        <QuickAddAnimal locationId={id} />
+
         {residents.length === 0 ? (
-          <div className="empty">No hay animales en este potrero.</div>
+          <div className="empty">Todavía no hay animales en este potrero.</div>
         ) : (
           <>
             <BulkPanel
@@ -190,6 +193,130 @@ export default function LocationEdit() {
             </div>
           </>
         )}
+      </div>
+    </div>
+  );
+}
+
+/** Alta rápida de un animal ya asignado a este potrero (sin salir de la pantalla). */
+function QuickAddAnimal({ locationId }: { locationId: string }) {
+  const [open, setOpen] = useState(false);
+  const [tagId, setTagId] = useState('');
+  const [breed, setBreed] = useState('');
+  const [species, setSpecies] = useState<Species>('BOVINE');
+  const [sex, setSex] = useState<Sex>('FEMALE');
+  const today = new Date().toISOString().slice(0, 10);
+  const [birthDate, setBirthDate] = useState(today);
+  const [weight, setWeight] = useState('');
+  const [error, setError] = useState('');
+  const [msg, setMsg] = useState('');
+  const [saving, setSaving] = useState(false);
+
+  async function add() {
+    setError('');
+    setMsg('');
+    if (!tagId.trim()) return setError('La caravana es obligatoria');
+    const w = Number(weight);
+    if (!(w > 0)) return setError('El peso inicial debe ser mayor a 0');
+    if (birthDate > today) return setError('La fecha de nacimiento no puede ser futura');
+    if (await db.animals.where('tagId').equals(tagId.trim()).first()) {
+      return setError('Ya existe un animal con esa caravana');
+    }
+    setSaving(true);
+    try {
+      const tag = tagId.trim();
+      await createAnimal({
+        tagId: tag,
+        species,
+        breed: breed.trim() || 'Sin especificar',
+        sex,
+        birthDate: new Date(birthDate).toISOString(),
+        initialWeightKg: w,
+        currentLocationId: locationId,
+      });
+      // Deja el form abierto para cargar el siguiente rápido.
+      setMsg(`✅ ${tag} agregado a este potrero`);
+      setTagId('');
+      setBreed('');
+      setWeight('');
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  if (!open) {
+    return (
+      <button className="btn btn-outline" onClick={() => setOpen(true)}>
+        ➕ Agregar animal a este potrero
+      </button>
+    );
+  }
+
+  return (
+    <div className="bulk">
+      <h2 style={{ fontSize: 15 }}>Agregar animal</h2>
+      <label>Caravana *</label>
+      <input value={tagId} onChange={(e) => setTagId(e.target.value)} placeholder="AR-0001" />
+      <div className="row2">
+        <div>
+          <label>Especie</label>
+          <select value={species} onChange={(e) => setSpecies(e.target.value as Species)}>
+            {Object.entries(speciesLabel).map(([k, v]) => (
+              <option key={k} value={k}>
+                {v}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div>
+          <label>Sexo</label>
+          <select value={sex} onChange={(e) => setSex(e.target.value as Sex)}>
+            {Object.entries(sexLabel).map(([k, v]) => (
+              <option key={k} value={k}>
+                {v}
+              </option>
+            ))}
+          </select>
+        </div>
+      </div>
+      <label>Raza</label>
+      <input value={breed} onChange={(e) => setBreed(e.target.value)} placeholder="Angus" />
+      <div className="row2">
+        <div>
+          <label>Nacimiento</label>
+          <input type="date" max={today} value={birthDate} onChange={(e) => setBirthDate(e.target.value)} />
+        </div>
+        <div>
+          <label>Peso inicial (kg)</label>
+          <input
+            type="number"
+            inputMode="decimal"
+            step="0.1"
+            value={weight}
+            onChange={(e) => setWeight(e.target.value)}
+            placeholder="45"
+          />
+        </div>
+      </div>
+
+      {error && <div className="error">{error}</div>}
+      {msg && <div className="ok">{msg}</div>}
+
+      <div className="row2">
+        <button
+          type="button"
+          className="btn btn-outline"
+          onClick={() => {
+            setOpen(false);
+            setMsg('');
+            setError('');
+          }}
+        >
+          Cerrar
+        </button>
+        <button className="btn" disabled={saving} onClick={() => void add()}>
+          {saving ? 'Guardando…' : 'Agregar'}
+        </button>
       </div>
     </div>
   );
