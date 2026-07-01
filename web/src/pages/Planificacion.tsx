@@ -81,7 +81,7 @@ export default function Planificacion() {
         <input type="datetime-local" value={due} onChange={(e) => setDue(e.target.value)} />
         {error && <div className="error">{error}</div>}
         <button className="btn" disabled={saving}>
-          {saving ? 'Guardando…' : '+ Agregar tarea'}
+          ➕ {saving ? 'Guardando…' : 'Agregar tarea'}
         </button>
       </form>
 

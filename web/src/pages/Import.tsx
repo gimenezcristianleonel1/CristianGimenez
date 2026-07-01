@@ -221,7 +221,7 @@ export default function Import() {
               </div>
             ))}
             <button className="btn" disabled={busy} onClick={() => void confirmMapping()}>
-              Confirmar y guardar
+              ✅ Confirmar y guardar
             </button>
           </div>
         )}

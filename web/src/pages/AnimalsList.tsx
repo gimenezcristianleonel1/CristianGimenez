@@ -77,7 +77,7 @@ export default function AnimalsList() {
       )}
 
       <Link className="fab" to="/animals/new" aria-label="Registrar animal">
-        +
+        ➕ <span>Nuevo animal</span>
       </Link>
     </div>
   );

@@ -317,7 +317,7 @@ function MovementsTab({
           ))}
         </select>
         <button className="btn" style={{ marginTop: 0 }} disabled={!toLocationId} onClick={() => void move()}>
-          Mover
+          🚚 Mover
         </button>
       </div>
       {sorted.length === 0 ? (
@@ -438,7 +438,7 @@ function AnimalEditForm({
           Cancelar
         </button>
         <button className="btn" style={{ marginTop: 12 }} onClick={() => void save()} disabled={saving}>
-          {saving ? 'Guardando…' : 'Guardar cambios'}
+          💾 {saving ? 'Guardando…' : 'Guardar cambios'}
         </button>
       </div>
     </div>

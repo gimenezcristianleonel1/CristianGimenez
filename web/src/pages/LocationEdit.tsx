@@ -133,7 +133,7 @@ export default function LocationEdit() {
         {error && <div className="error">{error}</div>}
 
         <button className="btn" disabled={saving} onClick={() => void save()}>
-          {saving ? 'Guardando…' : 'Guardar cambios'}
+          💾 {saving ? 'Guardando…' : 'Guardar cambios'}
         </button>
 
         {!confirmDelete ? (
@@ -315,7 +315,7 @@ function QuickAddAnimal({ locationId }: { locationId: string }) {
           Cerrar
         </button>
         <button className="btn" disabled={saving} onClick={() => void add()}>
-          {saving ? 'Guardando…' : 'Agregar'}
+          ➕ {saving ? 'Guardando…' : 'Agregar'}
         </button>
       </div>
     </div>
@@ -402,7 +402,7 @@ function BulkPanel({
           ))}
         </select>
         <button className="btn" style={{ marginTop: 0 }} disabled={busy || !dest} onClick={() => void moveAll()}>
-          Mover los {residents.length}
+          🚚 Mover los {residents.length}
         </button>
       </div>
 

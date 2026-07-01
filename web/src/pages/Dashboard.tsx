@@ -44,7 +44,7 @@ export default function Dashboard() {
           automáticamente cuando vuelve la señal.
         </p>
         <Link className="btn" to="/animals/new">
-          + Registrar animal
+          ➕ Registrar animal
         </Link>
         <Link className="btn btn-outline" to="/locations/new">
           + Nuevo potrero

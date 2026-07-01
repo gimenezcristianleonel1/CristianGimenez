@@ -1,14 +1,36 @@
+/*
+ * Gestión Ganadera — Tema "Rústico / De Campo"
+ * Diseño accesible para adultos mayores y trabajo al aire libre:
+ *  - Paleta de tonos tierra (cuero, oliva, arena) con ALTO contraste de lectura.
+ *  - Tipografía grande y de trazo grueso; nada de grises claros en el texto.
+ *  - Botones gigantes y "tapables" con ícono + palabra de la acción.
+ *  - Tarjetas tipo "papel / carpeta de cuero": bordes definidos y sombra suave.
+ */
 :root {
-  --green: #2e7d32;
-  --green-dark: #1b5e20;
-  --bg: #f4f6f4;
-  --card: #ffffff;
-  --text: #1f2421;
-  --muted: #6b7280;
-  --border: #e2e8e2;
-  --danger: #c62828;
-  --warn: #ef6c00;
-  --radius: 14px;
+  /* Acción principal / éxito: verde oliva seco */
+  --olive: #556b1f;
+  --olive-dark: #3d4e15;
+  /* Chrome de la app / acentos: cuero y madera */
+  --leather: #7a4a26;
+  --leather-dark: #59331a;
+  /* Fondos: arena / beige que descansa la vista bajo el sol */
+  --sand: #efe4cb;
+  --sand-deep: #e5d6b6;
+  --paper: #fffdf5;
+  /* Texto: marrón muy oscuro (casi negro). El "muted" también es oscuro y legible */
+  --text: #2a1d10;
+  --muted: #5c4a32;
+  /* Bordes tostados bien visibles (sensación de cuero/papel grueso) */
+  --border: #c8ac7c;
+  --border-strong: #a8874f;
+  /* Alertas: rojo teja de granero y ocre mostaza */
+  --danger: #a12a17;
+  --danger-dark: #7c1f10;
+  --warn: #b06a0b;
+  --radius: 12px;
+  --shadow: 0 2px 3px rgba(74, 47, 20, 0.2), 0 6px 16px rgba(74, 47, 20, 0.12);
+  --font-head: Georgia, 'Iowan Old Style', 'Times New Roman', serif;
+  --font-body: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
 }
 
 * {
@@ -22,11 +44,35 @@ body,
   height: 100%;
 }
 
+html {
+  /* Base tipográfica grande: todo hereda de acá */
+  font-size: 18px;
+}
+
 body {
-  font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
-  background: var(--bg);
+  font-family: var(--font-body);
+  font-size: 1.05rem;
+  line-height: 1.55;
+  background: var(--sand);
   color: var(--text);
   -webkit-tap-highlight-color: transparent;
+}
+
+h1,
+h2,
+h3 {
+  font-family: var(--font-head);
+  letter-spacing: 0.2px;
+}
+
+/* Foco visible y de alto contraste en todo lo interactivo (accesibilidad) */
+a:focus-visible,
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline: 3px solid var(--olive);
+  outline-offset: 2px;
 }
 
 .app {
@@ -35,237 +81,291 @@ body {
   min-height: 100%;
 }
 
-/* App bar */
+/* ===== Barra superior (madera / cuero) ===== */
 .appbar {
   position: sticky;
   top: 0;
   z-index: 10;
-  background: var(--green);
+  background: linear-gradient(165deg, var(--leather) 0%, var(--leather-dark) 100%);
   color: #fff;
-  padding: env(safe-area-inset-top) 16px 10px;
-  padding-top: max(12px, env(safe-area-inset-top));
+  padding: 12px 18px 14px;
+  padding-top: max(14px, env(safe-area-inset-top));
+  border-bottom: 3px solid var(--leather-dark);
+  box-shadow: var(--shadow);
 }
 .appbar-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 8px;
+  gap: 10px;
 }
 .appbar h1 {
-  font-size: 20px;
+  font-size: 1.45rem;
+  font-weight: 800;
   margin: 4px 0;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
 }
 .appbar-sync {
-  margin-top: 6px;
+  margin-top: 8px;
 }
 .appbar .muted {
-  color: rgba(255, 255, 255, 0.85);
-  font-size: 13px;
+  color: rgba(255, 255, 255, 0.92);
+  font-size: 0.95rem;
+  font-weight: 600;
 }
 
 .pill {
-  font-size: 12px;
-  font-weight: 600;
-  padding: 4px 10px;
+  font-size: 0.9rem;
+  font-weight: 800;
+  padding: 7px 14px;
   border-radius: 999px;
+  border: 2px solid rgba(255, 255, 255, 0.55);
+  white-space: nowrap;
 }
 .pill-online {
-  background: rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.22);
 }
 .pill-offline {
   background: var(--warn);
+  border-color: rgba(255, 255, 255, 0.85);
 }
 
-/* Content */
+/* ===== Contenido ===== */
 .content {
   flex: 1;
-  padding: 16px;
-  padding-bottom: 88px;
+  padding: 18px;
+  padding-bottom: 120px; /* deja aire sobre la barra inferior alta */
   max-width: 720px;
   width: 100%;
   margin: 0 auto;
 }
 
-/* Bottom nav */
+/* ===== Barra inferior (siempre visible, sin menús ocultos) ===== */
 .bottomnav {
   position: fixed;
   bottom: 0;
   left: 0;
   right: 0;
   display: flex;
-  background: var(--card);
-  border-top: 1px solid var(--border);
+  background: var(--paper);
+  border-top: 3px solid var(--border-strong);
   padding-bottom: env(safe-area-inset-bottom);
+  box-shadow: 0 -3px 12px rgba(74, 47, 20, 0.15);
 }
 .bottomnav a {
   flex: 1;
   text-align: center;
-  padding: 10px 0;
-  font-size: 22px;
+  padding: 12px 0 10px;
+  font-size: 26px;
   color: var(--muted);
   text-decoration: none;
+  font-weight: 700;
 }
 .bottomnav a span {
   display: block;
-  font-size: 11px;
-  margin-top: 2px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  margin-top: 4px;
 }
 .bottomnav a.active {
-  color: var(--green);
-  font-weight: 700;
+  color: var(--leather);
+  background: #f6edd7;
+  box-shadow: inset 0 -4px 0 var(--leather);
 }
 /* Ícono con badge de tareas urgentes (visible desde cualquier pantalla) */
 .bottomnav a span.nav-icon {
   display: inline-block;
   position: relative;
-  font-size: 22px;
+  font-size: 26px;
   margin-top: 0;
 }
 .bottomnav a span.nav-badge {
   display: block;
   position: absolute;
-  top: -6px;
-  right: -12px;
-  min-width: 16px;
-  height: 16px;
-  padding: 0 4px;
+  top: -8px;
+  right: -14px;
+  min-width: 22px;
+  height: 22px;
+  padding: 0 5px;
   box-sizing: border-box;
   background: var(--danger);
   color: #fff;
-  font-size: 10px;
-  font-weight: 700;
-  line-height: 16px;
+  font-size: 0.75rem;
+  font-weight: 800;
+  line-height: 22px;
   text-align: center;
+  border: 2px solid var(--paper);
   border-radius: 999px;
   margin-top: 0;
 }
 
-/* Cards & lists */
+/* ===== Tarjetas tipo papel / carpeta de cuero ===== */
 .card {
-  background: var(--card);
-  border: 1px solid var(--border);
+  background: var(--paper);
+  border: 2px solid var(--border);
   border-radius: var(--radius);
-  padding: 16px;
-  margin-bottom: 12px;
+  padding: 20px;
+  margin-bottom: 16px;
+  box-shadow: var(--shadow);
 }
 .card h2 {
-  margin: 0 0 12px;
-  font-size: 17px;
+  margin: 0 0 14px;
+  font-size: 1.3rem;
+  font-weight: 800;
+  color: var(--leather-dark);
 }
 .list-item {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  background: var(--card);
-  border: 1px solid var(--border);
+  background: var(--paper);
+  border: 2px solid var(--border);
   border-radius: var(--radius);
-  padding: 14px 16px;
-  margin-bottom: 10px;
+  padding: 18px 18px;
+  margin-bottom: 14px;
   text-decoration: none;
   color: inherit;
+  box-shadow: var(--shadow);
+  min-height: 68px;
+}
+.list-item:active {
+  background: #f6edd7;
 }
 .list-item .title {
-  font-weight: 600;
+  font-weight: 800;
+  font-size: 1.15rem;
 }
 .list-item .sub {
-  font-size: 13px;
+  font-size: 0.95rem;
   color: var(--muted);
+  font-weight: 600;
 }
 
 .grid2 {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 12px;
+  gap: 14px;
 }
 .stat {
-  background: var(--card);
-  border: 1px solid var(--border);
+  background: var(--paper);
+  border: 2px solid var(--border);
   border-radius: var(--radius);
-  padding: 16px;
+  padding: 20px 16px;
   text-align: center;
+  box-shadow: var(--shadow);
 }
 .stat .n {
-  font-size: 28px;
+  font-family: var(--font-head);
+  font-size: 2.4rem;
   font-weight: 800;
-  color: var(--green);
+  color: var(--olive-dark);
+  line-height: 1.1;
 }
 .stat .l {
-  font-size: 13px;
+  font-size: 1rem;
+  font-weight: 700;
   color: var(--muted);
 }
 
-/* Badges */
+/* ===== Chapas / etiquetas ===== */
 .badge {
   display: inline-block;
-  font-size: 11px;
-  font-weight: 700;
-  padding: 3px 8px;
+  font-size: 0.85rem;
+  font-weight: 800;
+  padding: 5px 12px;
   border-radius: 999px;
-  background: #eef3ee;
-  color: var(--green-dark);
+  background: #e9edd6;
+  color: var(--olive-dark);
+  border: 1.5px solid #c3cf9a;
 }
 .badge.dirty {
-  background: #fff3e0;
-  color: var(--warn);
+  background: #fbeccb;
+  color: #8a4b00;
+  border-color: #e5c079;
 }
 .badge.danger {
-  background: #fdecea;
-  color: var(--danger);
+  background: #f7ddd6;
+  color: var(--danger-dark);
+  border-color: #dda093;
 }
 
-/* Forms */
+/* ===== Formularios: una sola columna, etiquetas grandes, mucho aire ===== */
 label {
   display: block;
-  font-size: 13px;
-  font-weight: 600;
-  margin: 12px 0 6px;
+  font-size: 1.05rem;
+  font-weight: 800;
+  margin: 20px 0 8px;
+  color: var(--text);
 }
 input,
 select,
 textarea {
   width: 100%;
-  padding: 13px 12px;
-  font-size: 16px; /* >=16px prevents iOS zoom */
-  border: 1px solid var(--border);
+  padding: 16px 14px;
+  font-size: 1.1rem; /* >=16px evita el zoom en iOS y se lee de lejos */
+  font-weight: 600;
+  border: 2px solid var(--border-strong);
   border-radius: 10px;
   background: #fff;
   color: var(--text);
 }
+input::placeholder,
+textarea::placeholder {
+  color: #9a8560;
+}
+input:focus,
+select:focus,
+textarea:focus {
+  border-color: var(--olive);
+  background: #fffef8;
+}
+/* Los pares de campos se apilan en una sola columna (evita toques accidentales) */
 .row2 {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 12px;
+  grid-template-columns: 1fr;
+  gap: 0;
 }
 
-/* Buttons */
+/* ===== Botones GIGANTES y "tapables" (ícono + palabra) ===== */
 .btn {
-  display: block;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
   width: 100%;
-  padding: 15px;
-  font-size: 16px;
-  font-weight: 700;
+  padding: 18px 22px;
+  min-height: 62px;
+  font-family: var(--font-body);
+  font-size: 1.25rem;
+  font-weight: 800;
   color: #fff;
-  background: var(--green);
-  border: none;
+  background: var(--olive);
+  border: 2px solid var(--olive-dark);
   border-radius: 12px;
-  margin-top: 18px;
+  box-shadow: var(--shadow);
+  margin-top: 22px;
   cursor: pointer;
+  letter-spacing: 0.2px;
 }
 .btn:active {
-  background: var(--green-dark);
+  background: var(--olive-dark);
+  transform: translateY(1px);
 }
 .btn:disabled {
-  opacity: 0.6;
+  opacity: 0.55;
 }
 .btn-outline {
-  background: #fff;
-  color: var(--green);
-  border: 1.5px solid var(--green);
+  background: var(--paper);
+  color: var(--leather-dark);
+  border: 2px solid var(--leather);
+}
+.btn-outline:active {
+  background: #f2e6cf;
 }
 .btn-danger {
-  background: #fff;
+  background: var(--paper);
   color: var(--danger);
-  border: 1.5px solid var(--danger);
+  border: 2px solid var(--danger);
 }
 .btn-danger:active {
   background: var(--danger);
@@ -275,81 +375,95 @@ textarea {
   opacity: 0.55;
 }
 .btn-sm {
-  padding: 7px 14px;
-  font-size: 13px;
-  font-weight: 700;
-  color: var(--green);
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 11px 18px;
+  font-size: 1rem;
+  font-weight: 800;
+  color: var(--leather-dark);
   background: #fff;
-  border: none;
+  border: 2px solid var(--paper);
   border-radius: 999px;
   cursor: pointer;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
 }
 .btn-sm:disabled {
-  opacity: 0.55;
+  opacity: 0.6;
 }
 
+/* Botón flotante CON etiqueta (los adultos mayores necesitan leer la acción) */
 .fab {
   position: fixed;
-  right: 18px;
-  bottom: 78px;
-  width: 56px;
-  height: 56px;
-  border-radius: 50%;
-  background: var(--green);
-  color: #fff;
-  font-size: 28px;
-  border: none;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
-  text-decoration: none;
-  display: flex;
+  right: 16px;
+  bottom: 100px;
+  display: inline-flex;
   align-items: center;
-  justify-content: center;
+  gap: 10px;
+  padding: 16px 22px;
+  min-height: 60px;
+  border-radius: 16px;
+  background: var(--leather);
+  color: #fff;
+  font-size: 1.15rem;
+  font-weight: 800;
+  border: 2px solid var(--leather-dark);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.3);
+  text-decoration: none;
+}
+.fab:active {
+  background: var(--leather-dark);
 }
 
-/* Dropzone (importación) */
+/* ===== Zona de arrastre (importación) ===== */
 .dropzone {
-  border: 2px dashed var(--green);
-  border-radius: 12px;
-  padding: 22px 12px;
+  border: 3px dashed var(--leather);
+  border-radius: 14px;
+  padding: 26px 14px;
   text-align: center;
   color: var(--muted);
+  font-weight: 700;
   cursor: pointer;
-  background: #f7faf7;
+  background: #f8f0dd;
   transition: background 0.15s;
 }
 .dropzone.over {
-  background: #e8f2e8;
+  background: #ecdfbf;
 }
 .dropzone .dz-icon {
-  font-size: 28px;
+  font-size: 34px;
 }
 code {
-  background: #eef3ee;
-  padding: 1px 5px;
-  border-radius: 5px;
-  font-size: 12px;
+  background: #ece0c5;
+  padding: 2px 6px;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  font-weight: 700;
 }
 
-/* Tareas / Planificación */
+/* ===== Tareas / Planificación ===== */
 .alert-warning {
-  background: #fff3e0;
-  border: 1px solid var(--warn);
-  color: #8a4b00;
+  background: #fbeccb;
+  border: 2px solid var(--warn);
+  color: #7a4300;
   border-radius: 12px;
-  padding: 12px 14px;
-  margin-bottom: 12px;
-  font-size: 14px;
+  padding: 14px 16px;
+  margin-bottom: 16px;
+  font-size: 1.05rem;
+  font-weight: 700;
+  box-shadow: var(--shadow);
 }
 .task {
   display: flex;
   align-items: flex-start;
-  gap: 12px;
-  background: var(--card);
-  border: 1px solid var(--border);
-  border-left: 4px solid var(--border);
+  gap: 14px;
+  background: var(--paper);
+  border: 2px solid var(--border);
+  border-left: 8px solid var(--border-strong);
   border-radius: var(--radius);
-  padding: 12px 14px;
-  margin-bottom: 10px;
+  padding: 16px;
+  margin-bottom: 14px;
+  box-shadow: var(--shadow);
 }
 .task.urgent {
   border-left-color: var(--warn);
@@ -358,21 +472,22 @@ code {
   border-left-color: var(--danger);
 }
 .task.done {
-  opacity: 0.7;
+  opacity: 0.72;
 }
 .task input[type='checkbox'] {
-  width: 24px;
-  height: 24px;
+  width: 32px;
+  height: 32px;
   margin-top: 2px;
   flex: 0 0 auto;
-  accent-color: var(--green);
+  accent-color: var(--olive);
 }
 .task-body {
   flex: 1;
   min-width: 0;
 }
 .task-title {
-  font-weight: 600;
+  font-weight: 800;
+  font-size: 1.15rem;
 }
 .task-title.struck {
   text-decoration: line-through;
@@ -381,63 +496,76 @@ code {
 .btn-link-muted {
   background: none;
   border: none;
-  color: var(--muted);
-  font-weight: 600;
-  font-size: 14px;
+  color: var(--danger);
+  font-weight: 800;
+  font-size: 1rem;
   cursor: pointer;
-  padding: 6px 0;
+  padding: 8px 0;
+  text-decoration: underline;
 }
 
-/* Panel de acciones masivas */
+/* ===== Panel de acciones masivas ===== */
 .bulk {
-  background: #f7faf7;
-  border: 1px solid var(--border);
+  background: #f8f0dd;
+  border: 2px solid var(--border-strong);
   border-radius: 12px;
-  padding: 12px 14px;
+  padding: 16px;
+  box-shadow: var(--shadow);
 }
 .bulk h2 {
   margin-top: 0;
+  color: var(--leather-dark);
 }
 
-/* Tabs */
+/* ===== Pestañas (navegación simple, siempre a la vista) ===== */
 .tabs {
   display: flex;
-  gap: 8px;
-  margin-bottom: 12px;
+  gap: 10px;
+  margin-bottom: 16px;
 }
 .tab {
   flex: 1;
-  padding: 10px 6px;
-  font-size: 13px;
-  font-weight: 600;
-  border: 1px solid var(--border);
-  background: #fff;
+  padding: 14px 8px;
+  font-size: 1rem;
+  font-weight: 800;
+  border: 2px solid var(--border-strong);
+  background: var(--paper);
   color: var(--muted);
-  border-radius: 999px;
+  border-radius: 12px;
   cursor: pointer;
+  min-height: 52px;
 }
 .tab.active {
-  background: var(--green);
+  background: var(--leather);
   color: #fff;
-  border-color: var(--green);
+  border-color: var(--leather-dark);
 }
 
 .muted {
   color: var(--muted);
+  font-weight: 600;
 }
 .error {
-  color: var(--danger);
-  font-size: 14px;
-  margin-top: 8px;
+  color: var(--danger-dark);
+  font-size: 1.05rem;
+  font-weight: 700;
+  margin-top: 10px;
+}
+.ok {
+  color: var(--olive-dark);
+  font-size: 1.05rem;
+  font-weight: 700;
+  margin-top: 10px;
 }
 
-/* Auth header row */
+/* ===== Cabecera de sesión ===== */
 .appbar-user {
-  margin-top: 4px;
+  margin-top: 6px;
 }
 .appbar-user .muted {
-  color: rgba(255, 255, 255, 0.85);
-  font-size: 13px;
+  color: rgba(255, 255, 255, 0.92);
+  font-size: 0.95rem;
+  font-weight: 600;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -446,75 +574,82 @@ code {
   background: none;
   border: none;
   color: #fff;
-  font-size: 13px;
-  font-weight: 700;
+  font-size: 1rem;
+  font-weight: 800;
   text-decoration: underline;
   cursor: pointer;
-  padding: 0;
+  padding: 4px 2px;
 }
 
-/* Login screen */
+/* ===== Pantalla de ingreso ===== */
 .login {
   min-height: 100vh;
   display: flex;
   align-items: center;
   justify-content: center;
   padding: 24px;
-  background: linear-gradient(160deg, var(--green) 0%, var(--green-dark) 100%);
+  background: linear-gradient(165deg, var(--leather) 0%, var(--leather-dark) 100%);
 }
 .login-card {
-  background: #fff;
+  background: var(--paper);
+  border: 3px solid var(--border-strong);
   border-radius: 20px;
-  padding: 32px 24px;
-  max-width: 360px;
+  padding: 34px 26px;
+  max-width: 380px;
   width: 100%;
   text-align: center;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 12px 34px rgba(0, 0, 0, 0.35);
 }
 .login-logo {
-  font-size: 56px;
+  font-size: 62px;
 }
 .login-card h1 {
-  margin: 8px 0 12px;
-  font-size: 22px;
-  color: var(--green-dark);
+  margin: 10px 0 14px;
+  font-size: 1.6rem;
+  font-weight: 800;
+  color: var(--leather-dark);
 }
 .login-btn {
   display: flex;
   justify-content: center;
-  margin: 20px 0 8px;
+  margin: 22px 0 8px;
   min-height: 44px;
 }
 .login-or {
-  margin: 14px 0 10px;
-  font-size: 13px;
+  margin: 16px 0 12px;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--muted);
 }
 .login-hint {
-  font-size: 12px;
-  margin-top: 16px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--muted);
+  margin-top: 18px;
 }
-.ok {
-  color: var(--green-dark);
-  font-size: 14px;
-  margin-top: 8px;
-}
+
+/* ===== Encabezados de sección ===== */
 .section-title {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin: 4px 0 12px;
+  margin: 6px 0 14px;
 }
 .section-title h2 {
   margin: 0;
-  font-size: 18px;
+  font-size: 1.4rem;
+  font-weight: 800;
+  color: var(--leather-dark);
 }
 .empty {
   text-align: center;
   color: var(--muted);
-  padding: 32px 16px;
+  font-weight: 600;
+  font-size: 1.05rem;
+  padding: 36px 16px;
 }
 a.link {
-  color: var(--green-dark);
-  font-weight: 600;
-  text-decoration: none;
+  color: var(--leather-dark);
+  font-weight: 800;
+  text-decoration: underline;
 }

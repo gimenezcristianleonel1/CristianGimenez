@@ -158,7 +158,7 @@ export default function LoginScreen() {
         {error && <div className="error">{error}</div>}
 
         <button className="btn" disabled={busy}>
-          {busy ? 'Procesando…' : mode === 'register' ? 'Crear cuenta' : 'Ingresar'}
+          🔑 {busy ? 'Procesando…' : mode === 'register' ? 'Crear cuenta' : 'Ingresar'}
         </button>
 
         {GOOGLE_CLIENT_ID && (

@@ -46,7 +46,7 @@ export default function Locations() {
       )}
 
       <Link className="fab" to="/locations/new" aria-label="Nuevo potrero">
-        +
+        ➕ <span>Nuevo potrero</span>
       </Link>
     </div>
   );
