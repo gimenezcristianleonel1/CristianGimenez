@@ -39,6 +39,7 @@ export interface Animal {
   currentLocationId: string | null;
   motherId?: string | null;
   fatherId?: string | null;
+  observations?: string | null;
   metadata?: Record<string, unknown>;
   /** Local-only: 1 when the record has unsynced changes. */
   _dirty?: number;

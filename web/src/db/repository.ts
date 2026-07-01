@@ -38,6 +38,7 @@ export interface NewAnimalInput {
   currentLocationId?: string | null;
   motherId?: string | null;
   fatherId?: string | null;
+  observations?: string;
   metadata?: Record<string, unknown>;
 }
 
@@ -56,6 +57,7 @@ export async function createAnimal(input: NewAnimalInput): Promise<string> {
     currentLocationId: input.currentLocationId ?? null,
     motherId: input.motherId ?? null,
     fatherId: input.fatherId ?? null,
+    observations: input.observations ?? null,
     metadata: input.metadata ?? {},
     _dirty: 1,
   });
@@ -84,6 +86,7 @@ export interface AnimalEditInput {
   sex?: Sex;
   birthDate?: string;
   initialWeightKg?: number;
+  observations?: string | null;
 }
 
 /** Edita datos de un animal (optimista local) y encola el PATCH para sync. */

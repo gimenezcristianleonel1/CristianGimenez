@@ -20,6 +20,7 @@ function buildAnimal(overrides: Partial<Animal> = {}): Animal {
     birthDate: new Date('2024-01-01'),
     initialWeightKg: '45' as unknown as Animal['initialWeightKg'],
     status: AnimalStatus.ACTIVE,
+    observations: null,
     motherId: null,
     fatherId: null,
     currentLocationId: null,

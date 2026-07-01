@@ -63,6 +63,12 @@ export class CreateAnimalDto {
   @IsUUID()
   currentLocationId?: string;
 
+  @ApiPropertyOptional({ description: 'Observaciones libres (cualquier eventualidad)' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(2000)
+  observations?: string;
+
   @ApiPropertyOptional({
     description: 'Metadatos de enriquecimiento (genética, origen, sensores...)',
     example: { origin: 'cabaña-sur' },

@@ -242,6 +242,9 @@ model Animal {
   initialWeightKg Decimal @map("initial_weight_kg") @db.Decimal(7, 2)
   status AnimalStatus @default(ACTIVE)
 
+  /// Observaciones libres del productor (cualquier eventualidad).
+  observations String?
+
   // Genealogía (auto-relaciones opcionales)
   motherId String? @map("mother_id") @db.Uuid
   mother   Animal? @relation("Maternity", fields: [motherId], references: [id], onDelete: SetNull, onUpdate: Cascade)

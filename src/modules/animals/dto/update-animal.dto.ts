@@ -58,6 +58,12 @@ export class UpdateAnimalDto {
   @IsUUID()
   fatherId?: string;
 
+  @ApiPropertyOptional({ description: 'Observaciones libres (cualquier eventualidad)' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(2000)
+  observations?: string;
+
   @ApiPropertyOptional({ description: 'Metadatos de enriquecimiento (merge superficial)' })
   @IsOptional()
   @IsObject()

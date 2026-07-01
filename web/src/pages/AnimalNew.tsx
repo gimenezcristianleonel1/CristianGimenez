@@ -22,6 +22,7 @@ export default function AnimalNew() {
   const [currentLocationId, setCurrentLocationId] = useState('');
   const [motherId, setMotherId] = useState('');
   const [fatherId, setFatherId] = useState('');
+  const [observations, setObservations] = useState('');
   const [error, setError] = useState('');
   const [saving, setSaving] = useState(false);
 
@@ -54,6 +55,7 @@ export default function AnimalNew() {
         currentLocationId: currentLocationId || null,
         motherId: motherId || null,
         fatherId: fatherId || null,
+        observations: observations.trim() || undefined,
       });
       navigate(`/animals/${id}`, { replace: true });
     } finally {
@@ -141,6 +143,14 @@ export default function AnimalNew() {
           </option>
         ))}
       </select>
+
+      <label>Observaciones (opcional)</label>
+      <textarea
+        rows={3}
+        value={observations}
+        onChange={(e) => setObservations(e.target.value)}
+        placeholder="Cualquier eventualidad: marcas, temperamento, notas sanitarias…"
+      />
 
       {error && <div className="error">{error}</div>}
 

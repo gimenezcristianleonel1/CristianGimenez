@@ -96,6 +96,11 @@ export default function AnimalDetail() {
               Último peso: {lastWeight ? `${Number(lastWeight.weightKg)} kg` : '—'}
               {adg !== null ? ` · GDP: ${adg} kg/día` : ''}
             </div>
+            {animal.observations ? (
+              <div className="sub" style={{ marginTop: 8, whiteSpace: 'pre-wrap' }}>
+                📝 <strong>Observaciones:</strong> {animal.observations}
+              </div>
+            ) : null}
 
             <button className="btn btn-outline" onClick={() => setEditing(true)}>
               ✏️ Editar datos
@@ -357,6 +362,7 @@ function AnimalEditForm({
   const [sex, setSex] = useState<Sex>(animal.sex);
   const [birthDate, setBirthDate] = useState(animal.birthDate.slice(0, 10));
   const [weight, setWeight] = useState(String(Number(animal.initialWeightKg)));
+  const [observations, setObservations] = useState(animal.observations ?? '');
   const [error, setError] = useState('');
   const [saving, setSaving] = useState(false);
   const today = new Date().toISOString().slice(0, 10);
@@ -379,6 +385,9 @@ function AnimalEditForm({
       changes.birthDate = new Date(birthDate).toISOString();
     }
     if (w !== Number(animal.initialWeightKg)) changes.initialWeightKg = w;
+    if (observations.trim() !== (animal.observations ?? '').trim()) {
+      changes.observations = observations.trim();
+    }
 
     setSaving(true);
     try {
@@ -432,6 +441,13 @@ function AnimalEditForm({
           />
         </div>
       </div>
+      <label>Observaciones (opcional)</label>
+      <textarea
+        rows={3}
+        value={observations}
+        onChange={(e) => setObservations(e.target.value)}
+        placeholder="Cualquier eventualidad: marcas, temperamento, notas sanitarias…"
+      />
       {error && <div className="error">{error}</div>}
       <div className="row2">
         <button className="btn btn-outline" style={{ marginTop: 12 }} onClick={onCancel} disabled={saving}>
