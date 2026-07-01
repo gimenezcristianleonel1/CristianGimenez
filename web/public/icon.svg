@@ -1,9 +1,19 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
-  <rect width="512" height="512" rx="96" fill="#2e7d32"/>
-  <g fill="#ffffff">
-    <path d="M168 168c-26 0-44 16-52 36-22 6-40 26-40 52 0 12 4 22 10 30-8 24 4 50 30 58 14 40 54 60 110 60s96-20 110-60c26-8 38-34 30-58 6-8 10-18 10-30 0-26-18-46-40-52-8-20-26-36-52-36-16 0-30 6-40 16-10-10-24-16-40-16z"/>
-    <circle cx="208" cy="300" r="18" fill="#2e7d32"/>
-    <circle cx="304" cy="300" r="18" fill="#2e7d32"/>
-    <path d="M226 360c18 14 42 14 60 0" stroke="#2e7d32" stroke-width="14" fill="none" stroke-linecap="round"/>
+  <rect width="512" height="512" rx="112" fill="#6b4526"/>
+  <text x="256" y="132" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif"
+        font-size="70" font-weight="700" fill="#f5efe0" letter-spacing="1">Ganader-IA</text>
+  <g fill="none" stroke="#f5efe0" stroke-width="15" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M188 214c-30-40-22-84 12-96"/>
+    <path d="M324 214c30-40 22-84-12-96"/>
+    <path d="M170 214c-52-22-96 2-96 34 0 22 34 32 66 24"/>
+    <path d="M342 214c52-22 96 2 96 34 0 22-34 32-66 24"/>
+    <path d="M170 214c-12 66 4 122 40 162 18 20 30 30 46 30s28-10 46-30c36-40 52-96 40-162"/>
+    <path d="M214 356c16 16 68 16 84 0"/>
+  </g>
+  <g fill="#f5efe0">
+    <circle cx="214" cy="250" r="12"/>
+    <circle cx="298" cy="250" r="12"/>
+    <circle cx="238" cy="330" r="9"/>
+    <circle cx="274" cy="330" r="9"/>
   </g>
 </svg>

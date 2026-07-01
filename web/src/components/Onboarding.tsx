@@ -1,35 +1,37 @@
 import { useState } from 'react';
 import { useAuth } from '../auth/AuthProvider';
+import { Icon, type IconName } from './Icon';
+import { CattleHead } from './Logo';
 
 interface Slide {
-  emoji: string;
+  icon: IconName | 'brand';
   title: string;
   body: string;
 }
 
 const SLIDES: Slide[] = [
   {
-    emoji: '👋',
-    title: '¡Bienvenido!',
+    icon: 'brand',
+    title: 'Bienvenido a Ganader-IA',
     body: 'Tu campo en el bolsillo. La app funciona SIN conexión: cargás todo en el momento y se sincroniza sola cuando hay señal.',
   },
   {
-    emoji: '🐄',
+    icon: 'cow',
     title: 'Cargá tu rodeo',
-    body: 'Entrá a “Animales” y tocá el botón ➕ para registrar cada animal (caravana, raza, madre/padre). ¿Tenés una planilla? Importala desde Excel en “Importar”.',
+    body: 'Entrá a “Animales” y tocá el botón + para registrar cada animal (caravana, raza, madre/padre). ¿Tenés una planilla? Importala desde Excel en “Importar”.',
   },
   {
-    emoji: '📍',
+    icon: 'location',
     title: 'Potreros y carga',
     body: 'Creá tus potreros con sus hectáreas. En “Análisis” vas a ver la carga real (EV por hectárea) y te avisa si hay riesgo de sobrepastoreo.',
   },
   {
-    emoji: '🩺',
+    icon: 'repro',
     title: 'Reproducción y recorridas',
     body: 'Registrá tactos, servicios, pariciones y destetes. En cada animal, la pestaña “Novedades” anota condición corporal, tratamientos, muertes, cambios de caravana y más.',
   },
   {
-    emoji: '📋',
+    icon: 'clipboard',
     title: 'Todo queda registrado',
     body: 'Cada animal tiene su historia completa y trazable, con tareas y recordatorios, y un panel de inicio con los números clave. ¡Listo para empezar!',
   },
@@ -57,7 +59,9 @@ export default function Onboarding() {
         <button className="onb-skip" onClick={close}>
           Saltar tutorial
         </button>
-        <div className="onb-emoji">{slide.emoji}</div>
+        <div className="onb-emoji">
+          {slide.icon === 'brand' ? <CattleHead size={64} /> : <Icon name={slide.icon} size={56} strokeWidth={1.6} />}
+        </div>
         <h2>{slide.title}</h2>
         <p>{slide.body}</p>
 

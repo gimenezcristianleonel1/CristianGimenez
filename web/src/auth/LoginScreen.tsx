@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { ApiError } from '../api/client';
+import { Logo } from '../components/Logo';
+import { Icon } from '../components/Icon';
 import { useAuth } from './AuthProvider';
 
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID ?? '';
@@ -96,8 +98,9 @@ export default function LoginScreen() {
   return (
     <div className="login">
       <form className="login-card" onSubmit={submit}>
-        <div className="login-logo">🐄</div>
-        <h1>Gestión Ganadera</h1>
+        <div className="login-logo">
+          <Logo size={72} />
+        </div>
 
         <div className="tabs" style={{ marginBottom: 4 }}>
           <button
@@ -158,7 +161,7 @@ export default function LoginScreen() {
         {error && <div className="error">{error}</div>}
 
         <button className="btn" disabled={busy}>
-          🔑 {busy ? 'Procesando…' : mode === 'register' ? 'Crear cuenta' : 'Ingresar'}
+          <Icon name="key" size={18} /> {busy ? 'Procesando…' : mode === 'register' ? 'Crear cuenta' : 'Ingresar'}
         </button>
 
         {GOOGLE_CLIENT_ID && (

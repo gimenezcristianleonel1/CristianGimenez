@@ -12,8 +12,8 @@ export default defineConfig({
       registerType: 'autoUpdate',
       includeAssets: ['favicon.svg', 'icon.svg'],
       manifest: {
-        name: 'Gestión Ganadera',
-        short_name: 'Ganadería',
+        name: 'Ganader-IA',
+        short_name: 'Ganader-IA',
         description: 'Gestión ganadera offline-first para el campo',
         theme_color: '#7a4a26',
         background_color: '#efe4cb',
