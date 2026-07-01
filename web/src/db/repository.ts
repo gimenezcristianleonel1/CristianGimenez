@@ -275,3 +275,37 @@ export async function moveAnimal(animalId: string, input: NewMovementInput): Pro
   });
   return id;
 }
+
+// ---------------------------------------------------------------- Masivo
+
+/**
+ * Mueve TODOS los animales de un potrero a otro (una operación por animal,
+ * reutilizando moveAnimal → offline-first + sincronización idempotente).
+ * Devuelve la cantidad movida.
+ */
+export async function bulkMoveByLocation(
+  fromLocationId: string,
+  toLocationId: string,
+  reason?: MovementReason,
+): Promise<number> {
+  const animals = await db.animals.where('currentLocationId').equals(fromLocationId).toArray();
+  for (const a of animals) {
+    await moveAnimal(a.id, { toLocationId, reason });
+  }
+  return animals.length;
+}
+
+/**
+ * Aplica un evento sanitario a TODOS los animales de un potrero
+ * (p.ej. desparasitación masiva). Devuelve la cantidad tratada.
+ */
+export async function bulkHealthByLocation(
+  locationId: string,
+  input: NewHealthInput,
+): Promise<number> {
+  const animals = await db.animals.where('currentLocationId').equals(locationId).toArray();
+  for (const a of animals) {
+    await addHealth(a.id, input);
+  }
+  return animals.length;
+}

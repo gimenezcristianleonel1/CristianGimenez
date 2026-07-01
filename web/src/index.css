@@ -305,6 +305,17 @@ code {
   font-size: 12px;
 }
 
+/* Panel de acciones masivas */
+.bulk {
+  background: #f7faf7;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 12px 14px;
+}
+.bulk h2 {
+  margin-top: 0;
+}
+
 /* Tabs */
 .tabs {
   display: flex;
