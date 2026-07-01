@@ -11,6 +11,7 @@ const today = () => new Date().toISOString().slice(0, 10);
 export default function AnimalNew() {
   const navigate = useNavigate();
   const locations = useLiveQuery(() => db.locations.toArray(), [], []);
+  const animals = useLiveQuery(() => db.animals.toArray(), [], []);
 
   const [tagId, setTagId] = useState('');
   const [species, setSpecies] = useState<Species>('BOVINE');
@@ -19,8 +20,15 @@ export default function AnimalNew() {
   const [birthDate, setBirthDate] = useState(today());
   const [initialWeightKg, setInitialWeightKg] = useState('');
   const [currentLocationId, setCurrentLocationId] = useState('');
+  const [motherId, setMotherId] = useState('');
+  const [fatherId, setFatherId] = useState('');
   const [error, setError] = useState('');
   const [saving, setSaving] = useState(false);
+
+  const byTag = (a: { tagId: string }, b: { tagId: string }) =>
+    a.tagId.localeCompare(b.tagId, 'es', { numeric: true });
+  const females = animals.filter((a) => a.sex === 'FEMALE').sort(byTag);
+  const males = animals.filter((a) => a.sex === 'MALE').sort(byTag);
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -44,6 +52,8 @@ export default function AnimalNew() {
         birthDate: new Date(birthDate).toISOString(),
         initialWeightKg: weight,
         currentLocationId: currentLocationId || null,
+        motherId: motherId || null,
+        fatherId: fatherId || null,
       });
       navigate(`/animals/${id}`, { replace: true });
     } finally {
@@ -108,6 +118,26 @@ export default function AnimalNew() {
         {locations.map((l) => (
           <option key={l.id} value={l.id}>
             {l.name}
+          </option>
+        ))}
+      </select>
+
+      <label>Madre (opcional)</label>
+      <select value={motherId} onChange={(e) => setMotherId(e.target.value)}>
+        <option value="">— Sin registrar —</option>
+        {females.map((m) => (
+          <option key={m.id} value={m.id}>
+            {m.tagId} · {m.breed}
+          </option>
+        ))}
+      </select>
+
+      <label>Padre / Toro (opcional)</label>
+      <select value={fatherId} onChange={(e) => setFatherId(e.target.value)}>
+        <option value="">— Sin registrar —</option>
+        {males.map((p) => (
+          <option key={p.id} value={p.id}>
+            {p.tagId} · {p.breed}
           </option>
         ))}
       </select>

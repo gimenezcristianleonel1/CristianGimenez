@@ -19,6 +19,7 @@ describe('ReproductiveService', () => {
     countEventsByType: jest.Mock;
     eventsByAnimal: jest.Mock;
     checksByAnimal: jest.Mock;
+    offspringOf: jest.Mock;
   };
 
   beforeEach(() => {
@@ -34,6 +35,7 @@ describe('ReproductiveService', () => {
       countEventsByType: jest.fn().mockResolvedValue([]),
       eventsByAnimal: jest.fn().mockResolvedValue([]),
       checksByAnimal: jest.fn().mockResolvedValue([]),
+      offspringOf: jest.fn().mockResolvedValue([]),
     };
     service = new ReproductiveService(repo as unknown as ReproductiveRepository);
   });
@@ -189,6 +191,37 @@ describe('ReproductiveService', () => {
     it('rechaza (404) si el animal no es del establecimiento', async () => {
       repo.animalBelongsToEstablishment.mockResolvedValue(false);
       await expect(service.timeline(EST, 'a-1')).rejects.toBeInstanceOf(NotFoundException);
+    });
+  });
+
+  describe('maternity', () => {
+    it('devuelve la descendencia y los totales del ciclo del vientre', async () => {
+      repo.offspringOf.mockResolvedValue([
+        { id: 'h1', tagId: '101', sex: 'MALE', birthDate: new Date('2025-08-01'), status: 'ACTIVE' },
+        { id: 'h2', tagId: '102', sex: 'FEMALE', birthDate: new Date('2024-08-01'), status: 'SOLD' },
+      ]);
+      repo.eventsByAnimal.mockResolvedValue([
+        { type: ReproEventType.PARICION }, { type: ReproEventType.PARICION },
+        { type: ReproEventType.SERVICIO }, { type: ReproEventType.DESTETE },
+      ]);
+      repo.checksByAnimal.mockResolvedValue([
+        { result: PregnancyStatus.PRENADA }, { result: PregnancyStatus.PRENADA },
+      ]);
+      const r = await service.maternity(EST, 'a-1');
+      expect(r.totals.hijos).toBe(2);
+      expect(r.totals.machos).toBe(1);
+      expect(r.totals.hembras).toBe(1);
+      expect(r.totals.activos).toBe(1);
+      expect(r.totals.pariciones).toBe(2);
+      expect(r.totals.servicios).toBe(1);
+      expect(r.totals.destetes).toBe(1);
+      expect(r.totals.vecesPrenada).toBe(2);
+      expect(r.offspring[0].tagId).toBe('101');
+    });
+
+    it('rechaza (404) si el animal no es del establecimiento', async () => {
+      repo.animalBelongsToEstablishment.mockResolvedValue(false);
+      await expect(service.maternity(EST, 'a-1')).rejects.toBeInstanceOf(NotFoundException);
     });
   });
 });

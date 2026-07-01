@@ -1,7 +1,9 @@
 import { useMemo, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../db/db';
 import { createReproEvent } from '../db/repository';
+import { sexLabel, statusLabel, fmtDate } from '../lib/labels';
 import type { ReproEventType } from '../lib/types';
 
 const EVENT_LABEL: Record<ReproEventType, string> = {
@@ -54,6 +56,28 @@ export default function ReproHistoria() {
     return [...evs, ...chs].sort((a, b) => b.date.localeCompare(a.date));
   }, [events, checks, animalId]);
 
+  // Descendencia (hijos) por genealogía: caravana única madre/padre.
+  const offspring = useMemo(
+    () =>
+      animals
+        .filter((a) => a.motherId === animalId || a.fatherId === animalId)
+        .sort((a, b) => (b.birthDate ?? '').localeCompare(a.birthDate ?? '')),
+    [animals, animalId],
+  );
+
+  // Resumen reproductivo del vientre.
+  const myEvents = events.filter((e) => e.animalId === animalId);
+  const myChecks = checks.filter((c) => c.animalId === animalId);
+  const totals = {
+    hijos: offspring.length,
+    machos: offspring.filter((o) => o.sex === 'MALE').length,
+    hembras: offspring.filter((o) => o.sex === 'FEMALE').length,
+    servicios: myEvents.filter((e) => e.type === 'SERVICIO').length,
+    pariciones: myEvents.filter((e) => e.type === 'PARICION').length,
+    destetes: myEvents.filter((e) => e.type === 'DESTETE').length,
+    vecesPrenada: myChecks.filter((c) => c.result === 'PRENADA').length,
+  };
+
   const register = async () => {
     if (!animalId) return;
     setSaving(true);
@@ -88,8 +112,47 @@ export default function ReproHistoria() {
 
       {animalId && (
         <>
-          {/* Registrar evento del ciclo */}
+          {/* Hoja de vida reproductiva: resumen + descendencia */}
           <div className="card">
+            <h2>Vida reproductiva</h2>
+            <div className="grid2">
+              <div className="stat"><div className="n">{totals.hijos}</div><div className="l">Hijos</div></div>
+              <div className="stat"><div className="n">{totals.pariciones}</div><div className="l">Pariciones</div></div>
+              <div className="stat"><div className="n">{totals.servicios}</div><div className="l">Servicios</div></div>
+              <div className="stat"><div className="n">{totals.vecesPrenada}</div><div className="l">Veces preñada</div></div>
+            </div>
+          </div>
+
+          <div className="section-title">
+            <h2 style={{ fontSize: '1.15rem' }}>
+              Descendencia ({totals.hijos}
+              {totals.hijos > 0 ? ` · ${totals.machos}♂ ${totals.hembras}♀` : ''})
+            </h2>
+          </div>
+          {offspring.length === 0 ? (
+            <div className="empty">
+              Sin hijos registrados por genealogía.
+              <br />
+              Al dar de alta una cría, elegí a esta madre para vincularla.
+            </div>
+          ) : (
+            offspring.map((h) => (
+              <Link to={`/animals/${h.id}`} className="list-item" key={h.id}>
+                <div>
+                  <div className="title">🐄 {h.tagId}</div>
+                  <div className="sub">
+                    {sexLabel[h.sex]} · {h.breed} · nac. {fmtDate(h.birthDate)}
+                  </div>
+                </div>
+                <span className={`badge ${h.status === 'DECEASED' ? 'danger' : ''}`}>
+                  {statusLabel[h.status]}
+                </span>
+              </Link>
+            ))
+          )}
+
+          {/* Registrar evento del ciclo */}
+          <div className="card" style={{ marginTop: 16 }}>
             <h2>Registrar evento</h2>
             <div className="tabs">
               {(['SERVICIO', 'PARICION', 'DESTETE'] as ReproEventType[]).map((t) => (

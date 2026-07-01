@@ -32,6 +32,29 @@ export interface ReproductiveIndices {
   alerta: string | null;
 }
 
+export interface OffspringItem {
+  id: string;
+  tagId: string;
+  sex: string;
+  birthDate: string;
+  status: string;
+}
+export interface MaternityResponse {
+  success: true;
+  animalId: string;
+  offspring: OffspringItem[];
+  totals: {
+    hijos: number;
+    machos: number;
+    hembras: number;
+    activos: number;
+    servicios: number;
+    pariciones: number;
+    destetes: number;
+    vecesPrenada: number;
+  };
+}
+
 export type TimelineKind = 'SERVICIO' | 'TACTO' | 'ECOGRAFIA' | 'PARICION' | 'DESTETE';
 export interface TimelineItem {
   date: string;
@@ -266,5 +289,42 @@ export class ReproductiveService {
       return e.offspringTagId ? `Cría ${e.offspringTagId}` : 'Parición';
     }
     return 'Destete';
+  }
+
+  /**
+   * Hoja de vida reproductiva de una madre (o padre): su descendencia por
+   * genealogía (caravana única) más los totales del ciclo.
+   */
+  async maternity(establishmentId: string, animalId: string): Promise<MaternityResponse> {
+    const animalOk = await this.repo.animalBelongsToEstablishment(animalId, establishmentId);
+    if (!animalOk) throw new NotFoundException(`Animal ${animalId} not found`);
+
+    const [offspring, events, checks] = await Promise.all([
+      this.repo.offspringOf(establishmentId, animalId),
+      this.repo.eventsByAnimal(establishmentId, animalId),
+      this.repo.checksByAnimal(establishmentId, animalId),
+    ]);
+
+    return {
+      success: true,
+      animalId,
+      offspring: offspring.map((o) => ({
+        id: o.id,
+        tagId: o.tagId,
+        sex: o.sex,
+        birthDate: o.birthDate.toISOString(),
+        status: o.status,
+      })),
+      totals: {
+        hijos: offspring.length,
+        machos: offspring.filter((o) => o.sex === 'MALE').length,
+        hembras: offspring.filter((o) => o.sex === 'FEMALE').length,
+        activos: offspring.filter((o) => o.status === 'ACTIVE').length,
+        servicios: events.filter((e) => e.type === ReproEventType.SERVICIO).length,
+        pariciones: events.filter((e) => e.type === ReproEventType.PARICION).length,
+        destetes: events.filter((e) => e.type === ReproEventType.DESTETE).length,
+        vecesPrenada: checks.filter((c) => c.result === PregnancyStatus.PRENADA).length,
+      },
+    };
   }
 }

@@ -51,4 +51,13 @@ export class ReproductiveController {
   ) {
     return this.reproductiveService.timeline(est, animalId);
   }
+
+  @Get('animals/:animalId/maternity')
+  @ApiOperation({ summary: 'Hoja de vida reproductiva: descendencia (hijos) y totales del ciclo' })
+  maternity(
+    @CurrentUser('establishmentId') est: string,
+    @Param('animalId', new ParseUUIDPipe()) animalId: string,
+  ) {
+    return this.reproductiveService.maternity(est, animalId);
+  }
 }

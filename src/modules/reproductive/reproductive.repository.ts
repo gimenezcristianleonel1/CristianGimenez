@@ -97,4 +97,16 @@ export class ReproductiveRepository {
       orderBy: { date: 'desc' },
     });
   }
+
+  /** Descendencia de un animal (hijos por vía materna o paterna), del establecimiento. */
+  offspringOf(establishmentId: string, animalId: string) {
+    return this.prisma.animal.findMany({
+      where: {
+        establishmentId,
+        OR: [{ motherId: animalId }, { fatherId: animalId }],
+      },
+      orderBy: { birthDate: 'desc' },
+      select: { id: true, tagId: true, sex: true, birthDate: true, status: true },
+    });
+  }
 }

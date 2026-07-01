@@ -36,6 +36,8 @@ export interface NewAnimalInput {
   birthDate: string;
   initialWeightKg: number;
   currentLocationId?: string | null;
+  motherId?: string | null;
+  fatherId?: string | null;
   metadata?: Record<string, unknown>;
 }
 
@@ -52,6 +54,8 @@ export async function createAnimal(input: NewAnimalInput): Promise<string> {
     initialWeightKg: input.initialWeightKg,
     status: 'ACTIVE',
     currentLocationId: input.currentLocationId ?? null,
+    motherId: input.motherId ?? null,
+    fatherId: input.fatherId ?? null,
     metadata: input.metadata ?? {},
     _dirty: 1,
   });
@@ -60,7 +64,13 @@ export async function createAnimal(input: NewAnimalInput): Promise<string> {
     kind: 'animal.create',
     method: 'POST',
     path: '/animals',
-    body: { id, ...input, currentLocationId: input.currentLocationId || undefined },
+    body: {
+      id,
+      ...input,
+      currentLocationId: input.currentLocationId || undefined,
+      motherId: input.motherId || undefined,
+      fatherId: input.fatherId || undefined,
+    },
     entityTable: 'animals',
     entityId: id,
   });
