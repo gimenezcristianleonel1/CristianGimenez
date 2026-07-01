@@ -72,6 +72,30 @@ Todo scopeado por `establishmentId` (multi-tenant).
 > Librería: **exceljs** (procesa en memoria). Las fotos se guardan en `animal_photos`
 > (bytea); para gran escala conviene mover a almacenamiento de objetos (S3/Cloudinary).
 
+## 🗓️ Planificación y Tareas (con alertas)
+
+Módulo simple de tareas del campo (pendientes/cumplidas), aislado por establecimiento.
+
+- **`POST /api/v1/tasks`** — crear tarea (título, descripción, `dueDate` opcional).
+- **`PATCH /api/v1/tasks/:id`** — actualizar; al pasar a `COMPLETED` se registra
+  `completedAt` automáticamente (y se limpia si vuelve a `PENDING`).
+- **`GET /api/v1/tasks`** — lista ordenada por `dueDate` asc y calcula dinámicamente las
+  tareas **pendientes próximas a vencer o vencidas** (ventana de **48 h**). Respuesta:
+
+```json
+{
+  "success": true,
+  "notification": {
+    "type": "WARNING",
+    "message": "Tenés 2 tareas pendientes para los próximos días o vencidas.",
+    "urgentTaskIds": ["id1", "id2"]
+  },
+  "tasks": [ ... ]
+}
+```
+`notification` es `null` si no hay tareas urgentes. Modelo `Task` + enum `TaskStatus`
+(`PENDING`/`COMPLETED`), protegido por el guard JWT y acotado por `establishmentId`.
+
 ## 🗂️ Estructura del repositorio
 
 | Carpeta | Qué es |

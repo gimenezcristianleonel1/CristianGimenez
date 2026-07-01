@@ -54,6 +54,7 @@ async function bootstrap(): Promise<void> {
       .addTag('Sanidad', 'Eventos sanitarios y períodos de carencia')
       .addTag('Movements', 'Traslados de animales entre ubicaciones')
       .addTag('Import', 'Importación de Excel/fotos y exportación de animales')
+      .addTag('Tasks', 'Planificación y tareas del campo con alertas de vencimiento')
       .build();
 
     const document = SwaggerModule.createDocument(app, swaggerConfig);

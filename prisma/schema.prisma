@@ -91,6 +91,11 @@ enum OutboxStatus {
   FAILED
 }
 
+enum TaskStatus {
+  PENDING
+  COMPLETED
+}
+
 // ------------------------------------------------------------
 //  User (identidad - "Sign in with Google")
 // ------------------------------------------------------------
@@ -136,12 +141,37 @@ model Establishment {
   animals         Animal[]
   locations       Location[]
   importTemplates ImportTemplate[]
+  tasks           Task[]
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
   @@index([ownerId])
   @@map("establishments")
+}
+
+// ------------------------------------------------------------
+//  Task (Planificación y tareas del campo)
+// ------------------------------------------------------------
+
+model Task {
+  id          String     @id @default(uuid()) @db.Uuid
+  title       String
+  description String?
+  status      TaskStatus @default(PENDING)
+  /// Fecha límite de la tarea (para el cálculo de "próximas a vencer").
+  dueDate     DateTime?  @map("due_date")
+  /// Fecha de finalización (se setea al pasar a COMPLETED).
+  completedAt DateTime?  @map("completed_at")
+
+  establishmentId String        @map("establishment_id") @db.Uuid
+  establishment   Establishment @relation(fields: [establishmentId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([establishmentId])
+  @@map("tasks")
 }
 
 // ------------------------------------------------------------

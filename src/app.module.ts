@@ -15,6 +15,7 @@ import { ImportModule } from '@modules/import/import.module';
 import { LocationsModule } from '@modules/locations/locations.module';
 import { MovementsModule } from '@modules/movements/movements.module';
 import { SanitaryModule } from '@modules/sanitary/sanitary.module';
+import { TasksModule } from '@modules/tasks/tasks.module';
 
 @Module({
   imports: [
@@ -44,6 +45,7 @@ import { SanitaryModule } from '@modules/sanitary/sanitary.module';
     LocationsModule,
     SanitaryModule,
     MovementsModule,
+    TasksModule,
   ],
   providers: [
     // Authentication is required by default; routes opt out with @Public().
