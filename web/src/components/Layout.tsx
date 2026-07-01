@@ -9,6 +9,13 @@ export default function Layout() {
   const { user, establishment, logout } = useAuth();
   const pending = useLiveQuery(() => db.outbox.count(), [], 0);
   const conflicts = useLiveQuery(() => db.conflicts.count(), [], 0);
+  const tasks = useLiveQuery(() => db.tasks.toArray(), [], []);
+
+  // Tareas pendientes vencidas o que vencen dentro de 48 h (badge en la nav).
+  const soon = Date.now() + 48 * 3600_000;
+  const urgentTasks = tasks.filter(
+    (t) => t.status === 'PENDING' && t.dueDate && new Date(t.dueDate).getTime() <= soon,
+  ).length;
 
   return (
     <div className="app">
@@ -52,7 +59,11 @@ export default function Layout() {
           📍<span>Potreros</span>
         </NavLink>
         <NavLink to="/tasks" className={({ isActive }) => (isActive ? 'active' : '')}>
-          📋<span>Tareas</span>
+          <span className="nav-icon">
+            📋
+            {urgentTasks > 0 && <span className="nav-badge">{urgentTasks}</span>}
+          </span>
+          <span>Tareas</span>
         </NavLink>
         <NavLink to="/import" className={({ isActive }) => (isActive ? 'active' : '')}>
           📥<span>Importar</span>

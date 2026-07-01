@@ -27,6 +27,9 @@ campo sin conexión a internet**. Todo lo que se registra se guarda en el dispos
 - Alta de **tareas** con fecha límite, y **check** para completar/reabrir (offline-first).
 - **Banner de alerta** cuando hay tareas pendientes **vencidas o que vencen en 48 h**
   (misma lógica que el backend, calculada también localmente para funcionar sin conexión).
+- **Badge en la barra inferior:** el ícono de *Tareas* muestra un **contador rojo** con la
+  cantidad de tareas urgentes (pendientes vencidas o que vencen en 48 h), así se ve **desde
+  cualquier pantalla** sin entrar a la sección. Se recalcula solo (offline) al completar tareas.
 - Las tareas cumplidas se agrupan en una sección aparte. Todo sincroniza solo.
 
 ## 📥 Sección Importar
