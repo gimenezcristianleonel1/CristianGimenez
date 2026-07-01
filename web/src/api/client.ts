@@ -57,6 +57,54 @@ export async function api<T = unknown>(path: string, options: RequestOptions = {
   return data as T;
 }
 
+/** Multipart upload (FormData) with the auth token attached. */
+export async function apiUpload<T = unknown>(path: string, formData: FormData): Promise<T> {
+  const token = getToken();
+  const res = await fetch(`${BASE_URL}${path}`, {
+    method: 'POST',
+    headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+    body: formData,
+  });
+  const text = await res.text();
+  const data = text ? safeJson(text) : undefined;
+  if (!res.ok) {
+    if (res.status === 401 && token) {
+      clearSession();
+      window.dispatchEvent(new Event(UNAUTHORIZED_EVENT));
+    }
+    const message =
+      data && typeof data === 'object' && 'message' in data
+        ? formatMessage((data as { message: unknown }).message)
+        : res.statusText;
+    throw new ApiError(res.status, message || `HTTP ${res.status}`, data);
+  }
+  return data as T;
+}
+
+/** Downloads a file (e.g. the Excel export) triggering a browser save. */
+export async function downloadFile(path: string, filename: string): Promise<void> {
+  const token = getToken();
+  const res = await fetch(`${BASE_URL}${path}`, {
+    headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+  });
+  if (!res.ok) {
+    if (res.status === 401 && token) {
+      clearSession();
+      window.dispatchEvent(new Event(UNAUTHORIZED_EVENT));
+    }
+    throw new ApiError(res.status, 'No se pudo descargar el archivo');
+  }
+  const blob = await res.blob();
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}
+
 /** Lightweight connectivity probe against the health endpoint. */
 export async function ping(timeoutMs = 4000): Promise<boolean> {
   const controller = new AbortController();

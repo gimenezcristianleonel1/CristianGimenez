@@ -19,6 +19,13 @@ campo sin conexión a internet**. Todo lo que se registra se guarda en el dispos
 - **Instalable:** Service Worker (Workbox) precachea la app para que cargue sin red.
 - **Mobile-first:** botones grandes, pensada para el teléfono en el campo.
 
+## 📥 Sección Importar
+
+- **Drag & drop** de Excel: fuzzy matching de columnas; si hay encabezados desconocidos
+  aparece un **selector de mapeo** (y se recuerda para la próxima vez).
+- **Drag & drop** de fotos: se asocian al animal por el nombre del archivo (caravana).
+- **Exportar** todos los animales del establecimiento a Excel.
+
 ## 🧱 Stack
 
 React + TypeScript · Vite · Dexie (IndexedDB) · vite-plugin-pwa (Workbox) · React Router.

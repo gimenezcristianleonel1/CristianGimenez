@@ -269,6 +269,30 @@ textarea {
   justify-content: center;
 }
 
+/* Dropzone (importación) */
+.dropzone {
+  border: 2px dashed var(--green);
+  border-radius: 12px;
+  padding: 22px 12px;
+  text-align: center;
+  color: var(--muted);
+  cursor: pointer;
+  background: #f7faf7;
+  transition: background 0.15s;
+}
+.dropzone.over {
+  background: #e8f2e8;
+}
+.dropzone .dz-icon {
+  font-size: 28px;
+}
+code {
+  background: #eef3ee;
+  padding: 1px 5px;
+  border-radius: 5px;
+  font-size: 12px;
+}
+
 /* Tabs */
 .tabs {
   display: flex;

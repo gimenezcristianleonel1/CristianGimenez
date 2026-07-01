@@ -46,6 +46,27 @@ rutas (salvo `/health`, `/auth/register`, `/auth/login` y `/auth/google`) exigen
 
 ---
 
+## 📥 Importación Inteligente (Excel + Fotos) y Exportación
+
+Todo scopeado por `establishmentId` (multi-tenant).
+
+- **`POST /animals/import`** — importa animales desde un **Excel** con **fuzzy matching**
+  de columnas: "N° Caravana", "RP", "Caravana", "Id_Animal" → `tagId`; "Peso (Kg)" →
+  `initialWeightKg`; y análogos para raza, sexo, especie y fecha de nacimiento.
+  - Si los encabezados no se reconocen, responde **`REQUIERE_MAPEO`** con las columnas
+    encontradas para que el usuario las empareje en el frontend.
+- **Aprendizaje de plantillas (`ImportTemplate`):** cuando el usuario confirma un mapeo,
+  se guarda por establecimiento (firma de encabezados). La próxima vez que suba un Excel
+  con la misma estructura, **se procesa automáticamente** sin volver a preguntar.
+- **`POST /animals/import/photos`** — sube varias imágenes; asocia cada archivo al animal
+  cuya **caravana coincide con el nombre** (`2044.jpg` o `caravana_2044.png` → animal 2044).
+- **`GET /animals/export/xlsx`** — exporta todos los animales del establecimiento a Excel.
+- **Frontend:** sección **Importar** con *drag & drop* de Excel e imágenes, selector de
+  mapeo cuando hace falta, y botón de exportación.
+
+> Librería: **exceljs** (procesa en memoria). Las fotos se guardan en `animal_photos`
+> (bytea); para gran escala conviene mover a almacenamiento de objetos (S3/Cloudinary).
+
 ## 🗂️ Estructura del repositorio
 
 | Carpeta | Qué es |

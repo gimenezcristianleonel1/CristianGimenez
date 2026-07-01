@@ -11,6 +11,7 @@ import { AnimalsModule } from '@modules/animals/animals.module';
 import { AuthModule } from '@modules/auth/auth.module';
 import { JwtAuthGuard } from '@modules/auth/guards/jwt-auth.guard';
 import { HealthModule } from '@modules/health/health.module';
+import { ImportModule } from '@modules/import/import.module';
 import { LocationsModule } from '@modules/locations/locations.module';
 import { MovementsModule } from '@modules/movements/movements.module';
 import { SanitaryModule } from '@modules/sanitary/sanitary.module';
@@ -36,6 +37,9 @@ import { SanitaryModule } from '@modules/sanitary/sanitary.module';
     // Feature modules
     AuthModule,
     HealthModule,
+    // ImportModule antes que AnimalsModule para que sus rutas estáticas
+    // (import, export/xlsx) se registren antes que animals/:id.
+    ImportModule,
     AnimalsModule,
     LocationsModule,
     SanitaryModule,

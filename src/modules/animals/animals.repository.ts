@@ -52,6 +52,14 @@ export class AnimalsRepository {
     return this.prisma.animal.count({ where: { currentLocationId: locationId } });
   }
 
+  /** Todos los animales de un establecimiento (para exportar). */
+  findAllByEstablishment(establishmentId: string): Promise<Animal[]> {
+    return this.prisma.animal.findMany({
+      where: { establishmentId },
+      orderBy: { tagId: 'asc' },
+    });
+  }
+
   findLocationById(id: string): Promise<Location | null> {
     return this.prisma.location.findUnique({ where: { id } });
   }

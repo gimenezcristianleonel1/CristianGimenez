@@ -6,6 +6,7 @@ import AnimalNew from './pages/AnimalNew';
 import AnimalDetail from './pages/AnimalDetail';
 import Locations from './pages/Locations';
 import LocationNew from './pages/LocationNew';
+import Import from './pages/Import';
 
 export default function App() {
   return (
@@ -17,6 +18,7 @@ export default function App() {
         <Route path="animals/:id" element={<AnimalDetail />} />
         <Route path="locations" element={<Locations />} />
         <Route path="locations/new" element={<LocationNew />} />
+        <Route path="import" element={<Import />} />
       </Route>
     </Routes>
   );

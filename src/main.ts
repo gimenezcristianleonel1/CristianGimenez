@@ -53,6 +53,7 @@ async function bootstrap(): Promise<void> {
       .addTag('Locations', 'Potreros, corrales y lotes (capacidad / ocupación)')
       .addTag('Sanidad', 'Eventos sanitarios y períodos de carencia')
       .addTag('Movements', 'Traslados de animales entre ubicaciones')
+      .addTag('Import', 'Importación de Excel/fotos y exportación de animales')
       .build();
 
     const document = SwaggerModule.createDocument(app, swaggerConfig);

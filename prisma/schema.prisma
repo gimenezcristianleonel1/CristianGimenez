@@ -133,14 +133,40 @@ model Establishment {
   ownerId String @map("owner_id") @db.Uuid
   owner   User   @relation(fields: [ownerId], references: [id], onDelete: Cascade, onUpdate: Cascade)
 
-  animals   Animal[]
-  locations Location[]
+  animals         Animal[]
+  locations       Location[]
+  importTemplates ImportTemplate[]
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
   @@index([ownerId])
   @@map("establishments")
+}
+
+// ------------------------------------------------------------
+//  ImportTemplate (aprendizaje de mapeos de columnas por establecimiento)
+// ------------------------------------------------------------
+
+model ImportTemplate {
+  id String @id @default(uuid()) @db.Uuid
+
+  establishmentId String        @map("establishment_id") @db.Uuid
+  establishment   Establishment @relation(fields: [establishmentId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  /// Firma normalizada de los encabezados del archivo (para reconocer la misma
+  /// estructura la próxima vez y mapear automáticamente).
+  signature String
+  name      String?
+  /// Mapeo { campoApp: "Encabezado del Excel" }, p.ej. { tagId: "N° Caravana" }.
+  mapping   Json @db.JsonB
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@unique([establishmentId, signature])
+  @@index([establishmentId])
+  @@map("import_templates")
 }
 
 // ------------------------------------------------------------
@@ -183,6 +209,7 @@ model Animal {
   weightHistory WeightHistory[]
   healthRecords HealthRecord[]
   movements     AnimalMovement[]
+  photo         AnimalPhoto?
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
@@ -316,6 +343,27 @@ model AnimalMovement {
   @@index([animalId, movedAt])
   @@index([toLocationId])
   @@map("animal_movements")
+}
+
+// ------------------------------------------------------------
+//  AnimalPhoto (foto del animal - una por animal, upsert)
+// ------------------------------------------------------------
+
+model AnimalPhoto {
+  id       String @id @default(uuid()) @db.Uuid
+  animalId String @unique @map("animal_id") @db.Uuid
+  animal   Animal @relation(fields: [animalId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  mimeType String  @map("mime_type")
+  filename String?
+  /// Bytes de la imagen (bytea). Para producción a gran escala conviene mover
+  /// esto a almacenamiento de objetos (S3/Cloudinary) y guardar sólo la URL.
+  data     Bytes
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("animal_photos")
 }
 
 // ------------------------------------------------------------

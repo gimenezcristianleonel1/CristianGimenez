@@ -51,6 +51,9 @@ export default function Layout() {
         <NavLink to="/locations" className={({ isActive }) => (isActive ? 'active' : '')}>
           📍<span>Potreros</span>
         </NavLink>
+        <NavLink to="/import" className={({ isActive }) => (isActive ? 'active' : '')}>
+          📥<span>Importar</span>
+        </NavLink>
       </nav>
     </div>
   );
