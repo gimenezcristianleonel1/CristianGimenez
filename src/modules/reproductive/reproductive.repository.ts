@@ -1,5 +1,11 @@
 import { Injectable } from '@nestjs/common';
-import { Prisma, PregnancyStatus, ReproductiveCheck } from '@prisma/client';
+import {
+  Prisma,
+  PregnancyStatus,
+  ReproductiveCheck,
+  ReproductiveEvent,
+  ReproEventType,
+} from '@prisma/client';
 import { PrismaService } from '@infrastructure/database/prisma.service';
 
 /** Acceso a datos de chequeos reproductivos, acotado por establecimiento (multi-tenant). */
@@ -40,5 +46,55 @@ export class ReproductiveRepository {
       _count: { _all: true },
     });
     return rows.map((r) => ({ result: r.result, count: r._count._all }));
+  }
+
+  // --------------------------------------------------- Eventos del ciclo
+
+  createEvent(data: Prisma.ReproductiveEventCreateInput): Promise<ReproductiveEvent> {
+    return this.prisma.reproductiveEvent.create({ data });
+  }
+
+  findEventById(id: string): Promise<ReproductiveEvent | null> {
+    return this.prisma.reproductiveEvent.findUnique({ where: { id } });
+  }
+
+  /** Conteo de chequeos por resultado en TODO el establecimiento (para índices). */
+  async countChecksByResult(
+    establishmentId: string,
+  ): Promise<Array<{ result: PregnancyStatus; count: number }>> {
+    const rows = await this.prisma.reproductiveCheck.groupBy({
+      by: ['result'],
+      where: { establishmentId },
+      _count: { _all: true },
+    });
+    return rows.map((r) => ({ result: r.result, count: r._count._all }));
+  }
+
+  /** Conteo de eventos por tipo en el establecimiento (servicios/pariciones/destetes). */
+  async countEventsByType(
+    establishmentId: string,
+  ): Promise<Array<{ type: ReproEventType; count: number }>> {
+    const rows = await this.prisma.reproductiveEvent.groupBy({
+      by: ['type'],
+      where: { establishmentId },
+      _count: { _all: true },
+    });
+    return rows.map((r) => ({ type: r.type, count: r._count._all }));
+  }
+
+  /** Chequeos (tacto/ecografía) de un animal, más recientes primero. */
+  checksByAnimal(establishmentId: string, animalId: string): Promise<ReproductiveCheck[]> {
+    return this.prisma.reproductiveCheck.findMany({
+      where: { establishmentId, animalId },
+      orderBy: { date: 'desc' },
+    });
+  }
+
+  /** Eventos (servicio/parición/destete) de un animal, más recientes primero. */
+  eventsByAnimal(establishmentId: string, animalId: string): Promise<ReproductiveEvent[]> {
+    return this.prisma.reproductiveEvent.findMany({
+      where: { establishmentId, animalId },
+      orderBy: { date: 'desc' },
+    });
   }
 }

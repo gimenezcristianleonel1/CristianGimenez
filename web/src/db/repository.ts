@@ -8,6 +8,7 @@ import type {
   MovementReason,
   OutboxOp,
   PregnancyStatus,
+  ReproEventType,
   Sex,
   Species,
   TaskStatus,
@@ -365,6 +366,49 @@ export async function createReproCheck(input: NewReproCheckInput): Promise<strin
       date,
     },
     entityTable: 'reproChecks',
+    entityId: id,
+  });
+  return id;
+}
+
+export interface NewReproEventInput {
+  animalId: string;
+  type: ReproEventType;
+  sireTagId?: string;
+  offspringTagId?: string;
+  observations?: string;
+  date?: string; // ISO; por defecto ahora
+}
+
+/** Registra un evento del ciclo (servicio/parición/destete) local y lo encola. */
+export async function createReproEvent(input: NewReproEventInput): Promise<string> {
+  const id = uuid();
+  const date = input.date ?? new Date().toISOString();
+  await db.reproEvents.add({
+    id,
+    animalId: input.animalId,
+    type: input.type,
+    sireTagId: input.sireTagId ?? null,
+    offspringTagId: input.offspringTagId ?? null,
+    observations: input.observations ?? null,
+    date,
+    _dirty: 1,
+  });
+  await enqueue({
+    id: uuid(),
+    kind: 'reproductive.event.create',
+    method: 'POST',
+    path: '/reproductive/events',
+    body: {
+      id,
+      animalId: input.animalId,
+      type: input.type,
+      sireTagId: input.sireTagId || undefined,
+      offspringTagId: input.offspringTagId || undefined,
+      observations: input.observations || undefined,
+      date,
+    },
+    entityTable: 'reproEvents',
     entityId: id,
   });
   return id;

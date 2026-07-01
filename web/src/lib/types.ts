@@ -112,6 +112,19 @@ export interface ReproCheckRow {
   _dirty?: number;
 }
 
+export type ReproEventType = 'SERVICIO' | 'PARICION' | 'DESTETE';
+
+export interface ReproEventRow {
+  id: string;
+  animalId: string;
+  type: ReproEventType;
+  sireTagId: string | null;
+  offspringTagId: string | null;
+  observations: string | null;
+  date: string;
+  _dirty?: number;
+}
+
 /** A queued API call to be replayed against the backend when online. */
 export interface OutboxOp {
   id: string;
@@ -127,7 +140,8 @@ export interface OutboxOp {
     | 'movement.create'
     | 'task.create'
     | 'task.update'
-    | 'reproductive.create';
+    | 'reproductive.create'
+    | 'reproductive.event.create';
   method: 'POST' | 'PATCH' | 'DELETE';
   path: string;
   body: Record<string, unknown>;
@@ -138,7 +152,8 @@ export interface OutboxOp {
     | 'health'
     | 'movements'
     | 'tasks'
-    | 'reproChecks';
+    | 'reproChecks'
+    | 'reproEvents';
   entityId: string;
   attempts: number;
   createdAt: string;

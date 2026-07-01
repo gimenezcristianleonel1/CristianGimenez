@@ -12,6 +12,8 @@ import Planificacion from './pages/Planificacion';
 import Analisis from './pages/Analisis';
 import CargaPotreros from './pages/CargaPotreros';
 import Reproductivo from './pages/Reproductivo';
+import ReproductivoIndices from './pages/ReproductivoIndices';
+import ReproHistoria from './pages/ReproHistoria';
 
 export default function App() {
   return (
@@ -29,6 +31,8 @@ export default function App() {
         <Route path="analisis" element={<Analisis />} />
         <Route path="analisis/carga" element={<CargaPotreros />} />
         <Route path="analisis/reproductivo" element={<Reproductivo />} />
+        <Route path="analisis/indices" element={<ReproductivoIndices />} />
+        <Route path="analisis/historia" element={<ReproHistoria />} />
       </Route>
     </Routes>
   );

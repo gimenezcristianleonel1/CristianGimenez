@@ -109,6 +109,13 @@ enum PregnancyStatus {
   VACIA
 }
 
+/// Eventos del ciclo reproductivo (serie de tiempo por animal).
+enum ReproEventType {
+  SERVICIO
+  PARICION
+  DESTETE
+}
+
 // ------------------------------------------------------------
 //  User (identidad - "Sign in with Google")
 // ------------------------------------------------------------
@@ -156,6 +163,7 @@ model Establishment {
   importTemplates ImportTemplate[]
   tasks           Task[]
   reproductiveChecks ReproductiveCheck[]
+  reproductiveEvents ReproductiveEvent[]
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
@@ -255,6 +263,7 @@ model Animal {
   movements     AnimalMovement[]
   photo         AnimalPhoto?
   reproductiveChecks ReproductiveCheck[]
+  reproductiveEvents ReproductiveEvent[]
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
@@ -463,4 +472,36 @@ model ReproductiveCheck {
   @@index([potreroId])
   @@index([animalId])
   @@map("reproductive_checks")
+}
+
+// ------------------------------------------------------------
+//  ReproductiveEvent (ciclo reproductivo: servicio, parición, destete)
+//  Serie temporal append-only que arma la historia de cada animal.
+// ------------------------------------------------------------
+
+model ReproductiveEvent {
+  id     String         @id @default(uuid()) @db.Uuid
+  date   DateTime       @default(now())
+  type   ReproEventType
+  observations String?
+
+  /// Caravana del toro del servicio (texto libre, opcional).
+  sireTagId String? @map("sire_tag_id")
+  /// Caravana de la cría en la parición (texto libre, opcional).
+  offspringTagId String? @map("offspring_tag_id")
+
+  /// Animal (madre/vientre) al que pertenece el evento.
+  animalId String @map("animal_id") @db.Uuid
+  animal   Animal @relation(fields: [animalId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  /// Establecimiento dueño del registro (multi-tenancy).
+  establishmentId String        @map("establishment_id") @db.Uuid
+  establishment   Establishment @relation(fields: [establishmentId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([establishmentId])
+  @@index([animalId, date])
+  @@index([type])
+  @@map("reproductive_events")
 }
