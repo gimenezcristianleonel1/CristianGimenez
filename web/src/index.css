@@ -523,6 +523,7 @@ code {
 /* ===== Pestañas (navegación simple, siempre a la vista) ===== */
 .tabs {
   display: flex;
+  flex-wrap: wrap;
   gap: 10px;
   margin-bottom: 16px;
 }

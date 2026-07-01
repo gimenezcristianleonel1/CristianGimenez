@@ -28,12 +28,14 @@ import type {
   HealthRow,
   LocationRow,
   MovementRow,
+  ReproCheckRow,
+  ReproEventRow,
   Sex,
   Species,
   WeightRow,
 } from '../lib/types';
 
-type Tab = 'weights' | 'health' | 'movements' | 'events';
+type Tab = 'history' | 'weights' | 'health' | 'movements' | 'events';
 
 export default function AnimalDetail() {
   const { id = '' } = useParams();
@@ -55,7 +57,17 @@ export default function AnimalDetail() {
     [id],
     [],
   );
-  const [tab, setTab] = useState<Tab>('weights');
+  const reproChecks = useLiveQuery(
+    () => db.reproChecks.where('animalId').equals(id).toArray(),
+    [id],
+    [],
+  );
+  const reproEvents = useLiveQuery(
+    () => db.reproEvents.where('animalId').equals(id).toArray(),
+    [id],
+    [],
+  );
+  const [tab, setTab] = useState<Tab>('history');
   const [editing, setEditing] = useState(false);
 
   if (animal === undefined) return <div className="empty">Cargando…</div>;
@@ -120,6 +132,9 @@ export default function AnimalDetail() {
       </div>
 
       <div className="tabs">
+        <button className={tab === 'history' ? 'tab active' : 'tab'} onClick={() => setTab('history')}>
+          Historia
+        </button>
         <button className={tab === 'weights' ? 'tab active' : 'tab'} onClick={() => setTab('weights')}>
           Pesajes ({weights.length})
         </button>
@@ -152,6 +167,18 @@ export default function AnimalDetail() {
           animalId={id}
           events={animalEvents}
           locations={locations.filter((l) => l.id !== animal.currentLocationId)}
+        />
+      )}
+      {tab === 'history' && (
+        <HistoryTab
+          animal={animal}
+          weights={weights}
+          health={health}
+          movements={movements}
+          events={animalEvents}
+          reproChecks={reproChecks}
+          reproEvents={reproEvents}
+          locName={locName}
         />
       )}
     </div>
@@ -653,6 +680,81 @@ function EventsTab({
           );
         })
       )}
+    </div>
+  );
+}
+
+interface TimelineItem {
+  date: string;
+  icon: string;
+  label: string;
+  detail: string;
+}
+
+/** Historia completa del animal: trazabilidad total desde el nacimiento. */
+function HistoryTab({
+  animal,
+  weights,
+  health,
+  movements,
+  events,
+  reproChecks,
+  reproEvents,
+  locName,
+}: {
+  animal: Animal;
+  weights: WeightRow[];
+  health: HealthRow[];
+  movements: MovementRow[];
+  events: AnimalEventRow[];
+  reproChecks: ReproCheckRow[];
+  reproEvents: ReproEventRow[];
+  locName: (id: string | null) => string;
+}) {
+  const repoEvMeta: Record<ReproEventRow['type'], { icon: string; label: string }> = {
+    SERVICIO: { icon: '🐂', label: 'Servicio' },
+    PARICION: { icon: '🐄', label: 'Parición' },
+    DESTETE: { icon: '🍼', label: 'Destete' },
+  };
+
+  const items: TimelineItem[] = [
+    ...weights.map((w) => ({ date: w.measuredAt, icon: '⚖️', label: 'Pesaje', detail: `${Number(w.weightKg)} kg` })),
+    ...health.map((h) => ({ date: h.appliedAt, icon: '💉', label: healthEventLabel[h.eventType], detail: h.medication ?? '' })),
+    ...movements.map((m) => ({ date: m.movedAt, icon: '🔀', label: 'Movimiento', detail: `${locName(m.fromLocationId)} → ${locName(m.toLocationId)}` })),
+    ...events.map((ev) => {
+      const meta = EVENT_META[ev.type];
+      const dest = ev.type === 'CAMBIO_LOTE' ? (ev.data?.toName as string | undefined) : undefined;
+      const bits = [
+        ev.type === 'CONDICION_CORPORAL' && ev.score != null ? `CC ${Number(ev.score)}` : '',
+        ev.weightKg != null ? `${Number(ev.weightKg)} kg` : '',
+        dest ? `→ ${dest}` : '',
+        ev.note ?? '',
+      ].filter(Boolean);
+      return { date: ev.date, icon: meta.icon, label: meta.label, detail: bits.join(' · ') };
+    }),
+    ...reproChecks.map((c) => ({ date: c.date, icon: c.type === 'ECOGRAFIA' ? '📡' : '✋', label: c.type === 'ECOGRAFIA' ? 'Ecografía' : 'Tacto', detail: c.result === 'PRENADA' ? 'Preñada' : 'Vacía' })),
+    ...reproEvents.map((e) => {
+      const meta = repoEvMeta[e.type];
+      const detail = e.type === 'SERVICIO' ? (e.sireTagId ? `Toro ${e.sireTagId}` : '') : e.type === 'PARICION' ? (e.offspringTagId ? `Cría ${e.offspringTagId}` : '') : '';
+      return { date: e.date, icon: meta.icon, label: meta.label, detail };
+    }),
+    { date: animal.birthDate, icon: '🐣', label: 'Nacimiento', detail: `Caravana ${animal.tagId}` },
+  ].sort((a, b) => b.date.localeCompare(a.date));
+
+  return (
+    <div>
+      <p className="muted" style={{ marginTop: 0 }}>
+        Trazabilidad completa del animal, de lo más nuevo a su nacimiento.
+      </p>
+      {items.map((it, i) => (
+        <div className="list-item" key={i}>
+          <div>
+            <div className="title">{it.icon} {it.label}</div>
+            {it.detail ? <div className="sub">{it.detail}</div> : null}
+          </div>
+          <span className="badge">{fmtDate(it.date)}</span>
+        </div>
+      ))}
     </div>
   );
 }
