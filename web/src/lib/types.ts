@@ -115,6 +115,28 @@ export interface ReproCheckRow {
 
 export type ReproEventType = 'SERVICIO' | 'PARICION' | 'DESTETE';
 
+export type AnimalEventType =
+  | 'NOTA'
+  | 'CONDICION_CORPORAL'
+  | 'PARTO'
+  | 'ABORTO'
+  | 'MUERTE'
+  | 'TRATAMIENTO'
+  | 'CAMBIO_LOTE'
+  | 'OTRO';
+
+export interface AnimalEventRow {
+  id: string;
+  animalId: string;
+  type: AnimalEventType;
+  note: string | null;
+  score: number | string | null;
+  weightKg: number | string | null;
+  data?: Record<string, unknown>;
+  date: string;
+  _dirty?: number;
+}
+
 export interface ReproEventRow {
   id: string;
   animalId: string;
@@ -142,7 +164,8 @@ export interface OutboxOp {
     | 'task.create'
     | 'task.update'
     | 'reproductive.create'
-    | 'reproductive.event.create';
+    | 'reproductive.event.create'
+    | 'animalEvent.create';
   method: 'POST' | 'PATCH' | 'DELETE';
   path: string;
   body: Record<string, unknown>;
@@ -154,7 +177,8 @@ export interface OutboxOp {
     | 'movements'
     | 'tasks'
     | 'reproChecks'
-    | 'reproEvents';
+    | 'reproEvents'
+    | 'animalEvents';
   entityId: string;
   attempts: number;
   createdAt: string;

@@ -5,6 +5,7 @@ import type {
   HealthRow,
   LocationRow,
   MovementRow,
+  AnimalEventRow,
   OutboxOp,
   ReproCheckRow,
   ReproEventRow,
@@ -30,6 +31,7 @@ export class LivestockDB extends Dexie {
   tasks!: Table<TaskRow, string>;
   reproChecks!: Table<ReproCheckRow, string>;
   reproEvents!: Table<ReproEventRow, string>;
+  animalEvents!: Table<AnimalEventRow, string>;
 
   constructor() {
     super('livestock');
@@ -54,6 +56,10 @@ export class LivestockDB extends Dexie {
     this.version(4).stores({
       reproEvents: 'id, animalId, type, date, _dirty',
     });
+    // v5: bitácora general del animal (notas, condición corporal, recorridas).
+    this.version(5).stores({
+      animalEvents: 'id, animalId, type, date, _dirty',
+    });
   }
 }
 
@@ -70,6 +76,7 @@ export async function clearAllData(): Promise<void> {
     db.tasks.clear(),
     db.reproChecks.clear(),
     db.reproEvents.clear(),
+    db.animalEvents.clear(),
     db.outbox.clear(),
     db.conflicts.clear(),
   ]);

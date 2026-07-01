@@ -8,6 +8,7 @@ import { PrismaModule } from '@infrastructure/database/prisma.module';
 import { EventsModule } from '@infrastructure/events/events.module';
 import { AiModule } from '@modules/ai/ai.module';
 import { AnimalsModule } from '@modules/animals/animals.module';
+import { AnimalEventsModule } from '@modules/animal-events/animal-events.module';
 import { AuthModule } from '@modules/auth/auth.module';
 import { JwtAuthGuard } from '@modules/auth/guards/jwt-auth.guard';
 import { HealthModule } from '@modules/health/health.module';
@@ -44,6 +45,7 @@ import { TasksModule } from '@modules/tasks/tasks.module';
     // (import, export/xlsx) se registren antes que animals/:id.
     ImportModule,
     AnimalsModule,
+    AnimalEventsModule,
     LocationsModule,
     SanitaryModule,
     MovementsModule,

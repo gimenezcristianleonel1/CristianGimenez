@@ -116,6 +116,18 @@ enum ReproEventType {
   DESTETE
 }
 
+/// Eventos generales del animal (recorridas diarias, condición corporal, notas).
+enum AnimalEventType {
+  NOTA
+  CONDICION_CORPORAL
+  PARTO
+  ABORTO
+  MUERTE
+  TRATAMIENTO
+  CAMBIO_LOTE
+  OTRO
+}
+
 // ------------------------------------------------------------
 //  User (identidad - "Sign in with Google")
 // ------------------------------------------------------------
@@ -164,6 +176,7 @@ model Establishment {
   tasks           Task[]
   reproductiveChecks ReproductiveCheck[]
   reproductiveEvents ReproductiveEvent[]
+  animalEvents    AnimalEvent[]
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
@@ -267,6 +280,7 @@ model Animal {
   photo         AnimalPhoto?
   reproductiveChecks ReproductiveCheck[]
   reproductiveEvents ReproductiveEvent[]
+  events        AnimalEvent[]
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
@@ -507,4 +521,36 @@ model ReproductiveEvent {
   @@index([animalId, date])
   @@index([type])
   @@map("reproductive_events")
+}
+
+// ------------------------------------------------------------
+//  AnimalEvent (bitácora general del animal: recorridas, CC, notas...)
+//  Serie temporal append-only que arma el historial completo del animal.
+// ------------------------------------------------------------
+
+model AnimalEvent {
+  id     String          @id @default(uuid()) @db.Uuid
+  date   DateTime        @default(now())
+  type   AnimalEventType
+  /// Texto libre (nota / detalle del evento).
+  note   String?
+  /// Condición corporal (escala 1–5) cuando aplica.
+  score  Decimal? @db.Decimal(3, 1)
+  /// Peso registrado junto al evento (kg), opcional.
+  weightKg Decimal? @map("weight_kg") @db.Decimal(7, 2)
+  /// Detalles específicos del tipo de evento.
+  data   Json @default("{}") @db.JsonB
+
+  animalId String @map("animal_id") @db.Uuid
+  animal   Animal @relation(fields: [animalId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  establishmentId String        @map("establishment_id") @db.Uuid
+  establishment   Establishment @relation(fields: [establishmentId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([establishmentId])
+  @@index([animalId, date])
+  @@index([type])
+  @@map("animal_events")
 }

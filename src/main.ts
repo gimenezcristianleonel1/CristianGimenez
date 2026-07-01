@@ -57,6 +57,7 @@ async function bootstrap(): Promise<void> {
       .addTag('Tasks', 'Planificación y tareas del campo con alertas de vencimiento')
       .addTag('Reports', 'Reportes productivos: carga animal por potrero en EV/Ha')
       .addTag('Reproductive', 'Diagnóstico reproductivo (tacto/ecografía) e índices de preñez')
+      .addTag('AnimalEvents', 'Bitácora del animal: notas con fecha, condición corporal, recorridas')
       .build();
 
     const document = SwaggerModule.createDocument(app, swaggerConfig);

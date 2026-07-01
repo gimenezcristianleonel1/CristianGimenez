@@ -1,6 +1,7 @@
 import { db } from './db';
 import { uuid } from '../lib/uuid';
 import type {
+  AnimalEventType,
   AnimalStatus,
   CheckType,
   HealthEventType,
@@ -422,6 +423,53 @@ export async function createReproEvent(input: NewReproEventInput): Promise<strin
       date,
     },
     entityTable: 'reproEvents',
+    entityId: id,
+  });
+  return id;
+}
+
+// ------------------------------------------------------ Bitácora del animal
+
+export interface NewAnimalEventInput {
+  animalId: string;
+  type: AnimalEventType;
+  note?: string;
+  score?: number;
+  weightKg?: number;
+  data?: Record<string, unknown>;
+  date?: string; // ISO; por defecto ahora
+}
+
+/** Registra un evento en la bitácora del animal (nota/CC/recorrida) y lo encola. */
+export async function createAnimalEvent(input: NewAnimalEventInput): Promise<string> {
+  const id = uuid();
+  const date = input.date ?? new Date().toISOString();
+  await db.animalEvents.add({
+    id,
+    animalId: input.animalId,
+    type: input.type,
+    note: input.note ?? null,
+    score: input.score ?? null,
+    weightKg: input.weightKg ?? null,
+    data: input.data ?? {},
+    date,
+    _dirty: 1,
+  });
+  await enqueue({
+    id: uuid(),
+    kind: 'animalEvent.create',
+    method: 'POST',
+    path: `/animals/${input.animalId}/events`,
+    body: {
+      id,
+      type: input.type,
+      note: input.note || undefined,
+      score: input.score,
+      weightKg: input.weightKg,
+      data: input.data,
+      date,
+    },
+    entityTable: 'animalEvents',
     entityId: id,
   });
   return id;

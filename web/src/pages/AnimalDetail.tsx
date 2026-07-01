@@ -6,6 +6,7 @@ import {
   addHealth,
   addWeight,
   changeAnimalStatus,
+  createAnimalEvent,
   moveAnimal,
   updateAnimal,
   type AnimalEditInput,
@@ -21,6 +22,7 @@ import {
 } from '../lib/labels';
 import type {
   Animal,
+  AnimalEventRow,
   AnimalStatus,
   HealthEventType,
   HealthRow,
@@ -31,7 +33,7 @@ import type {
   WeightRow,
 } from '../lib/types';
 
-type Tab = 'weights' | 'health' | 'movements';
+type Tab = 'weights' | 'health' | 'movements' | 'events';
 
 export default function AnimalDetail() {
   const { id = '' } = useParams();
@@ -45,6 +47,11 @@ export default function AnimalDetail() {
   const health = useLiveQuery(() => db.health.where('animalId').equals(id).toArray(), [id], []);
   const movements = useLiveQuery(
     () => db.movements.where('animalId').equals(id).toArray(),
+    [id],
+    [],
+  );
+  const animalEvents = useLiveQuery(
+    () => db.animalEvents.where('animalId').equals(id).toArray(),
     [id],
     [],
   );
@@ -125,6 +132,9 @@ export default function AnimalDetail() {
         >
           Movim. ({movements.length})
         </button>
+        <button className={tab === 'events' ? 'tab active' : 'tab'} onClick={() => setTab('events')}>
+          Novedades ({animalEvents.length})
+        </button>
       </div>
 
       {tab === 'weights' && <WeightsTab animalId={id} weights={weights} />}
@@ -137,6 +147,7 @@ export default function AnimalDetail() {
           locations={locations.filter((l) => l.id !== animal.currentLocationId)}
         />
       )}
+      {tab === 'events' && <EventsTab animalId={id} events={animalEvents} />}
     </div>
   );
 }
@@ -457,6 +468,145 @@ function AnimalEditForm({
           💾 {saving ? 'Guardando…' : 'Guardar cambios'}
         </button>
       </div>
+    </div>
+  );
+}
+
+const EVENT_META: Record<AnimalEventRow['type'], { icon: string; label: string }> = {
+  NOTA: { icon: '📝', label: 'Nota' },
+  CONDICION_CORPORAL: { icon: '⚖️', label: 'Condición corporal' },
+  PARTO: { icon: '🐄', label: 'Parto' },
+  ABORTO: { icon: '⚠️', label: 'Aborto' },
+  MUERTE: { icon: '💀', label: 'Muerte' },
+  TRATAMIENTO: { icon: '💉', label: 'Tratamiento' },
+  CAMBIO_LOTE: { icon: '🔀', label: 'Cambio de lote' },
+  OTRO: { icon: '•', label: 'Otro' },
+};
+
+function EventsTab({ animalId, events }: { animalId: string; events: AnimalEventRow[] }) {
+  const [mode, setMode] = useState<'NOTA' | 'CONDICION_CORPORAL'>('NOTA');
+  const [date, setDate] = useState(new Date().toISOString().slice(0, 10));
+  const [note, setNote] = useState('');
+  const [score, setScore] = useState('3');
+  const [weight, setWeight] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
+
+  const sorted = [...events].sort((a, b) => b.date.localeCompare(a.date));
+  const iso = () => new Date(date + 'T12:00:00').toISOString();
+
+  async function add() {
+    setError('');
+    setSaving(true);
+    try {
+      if (mode === 'NOTA') {
+        if (!note.trim()) {
+          setError('Escribí una nota');
+          return;
+        }
+        await createAnimalEvent({ animalId, type: 'NOTA', note: note.trim(), date: iso() });
+        setNote('');
+      } else {
+        const w = weight ? Number(weight) : undefined;
+        if (w !== undefined && !(w > 0)) {
+          setError('El peso debe ser mayor a 0');
+          return;
+        }
+        await createAnimalEvent({
+          animalId,
+          type: 'CONDICION_CORPORAL',
+          score: Number(score),
+          weightKg: w,
+          note: note.trim() || undefined,
+          date: iso(),
+        });
+        // Si además cargó peso, lo sumamos al historial de pesajes (para GDP).
+        if (w !== undefined) await addWeight(animalId, { weightKg: w, source: 'MANUAL' });
+        setNote('');
+        setWeight('');
+      }
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <div>
+      <div className="card">
+        <h2>Registrar novedad</h2>
+        <div className="tabs">
+          <button className={`tab ${mode === 'NOTA' ? 'active' : ''}`} onClick={() => setMode('NOTA')}>
+            📝 Nota
+          </button>
+          <button
+            className={`tab ${mode === 'CONDICION_CORPORAL' ? 'active' : ''}`}
+            onClick={() => setMode('CONDICION_CORPORAL')}
+          >
+            ⚖️ Condición corporal
+          </button>
+        </div>
+
+        <label>Fecha</label>
+        <input type="date" value={date} max={new Date().toISOString().slice(0, 10)} onChange={(e) => setDate(e.target.value)} />
+
+        {mode === 'CONDICION_CORPORAL' && (
+          <div className="row2">
+            <div>
+              <label>Condición corporal (1–5)</label>
+              <select value={score} onChange={(e) => setScore(e.target.value)}>
+                {['1', '1.5', '2', '2.5', '3', '3.5', '4', '4.5', '5'].map((s) => (
+                  <option key={s} value={s}>
+                    {s}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label>Peso (kg, opcional)</label>
+              <input
+                type="number"
+                inputMode="decimal"
+                step="0.1"
+                value={weight}
+                onChange={(e) => setWeight(e.target.value)}
+                placeholder="Ej: 420"
+              />
+            </div>
+          </div>
+        )}
+
+        <label>{mode === 'NOTA' ? 'Nota *' : 'Observación (opcional)'}</label>
+        <textarea rows={2} value={note} onChange={(e) => setNote(e.target.value)} placeholder="Detalle de la novedad…" />
+
+        {error && <div className="error">{error}</div>}
+        <button className="btn" disabled={saving} onClick={() => void add()}>
+          ➕ {saving ? 'Guardando…' : 'Agregar novedad'}
+        </button>
+      </div>
+
+      {sorted.length === 0 ? (
+        <div className="empty">Sin novedades registradas todavía.</div>
+      ) : (
+        sorted.map((ev) => {
+          const meta = EVENT_META[ev.type];
+          return (
+            <div className="list-item" key={ev.id}>
+              <div>
+                <div className="title">
+                  {meta.icon} {meta.label}
+                  {ev.type === 'CONDICION_CORPORAL' && ev.score != null ? ` · CC ${Number(ev.score)}` : ''}
+                  {ev.weightKg != null ? ` · ${Number(ev.weightKg)} kg` : ''}
+                </div>
+                {ev.note ? <div className="sub">{ev.note}</div> : null}
+              </div>
+              <span className="badge">
+                {fmtDate(ev.date)}
+                {ev._dirty ? ' · sin sync' : ''}
+              </span>
+            </div>
+          );
+        })
+      )}
     </div>
   );
 }
