@@ -657,3 +657,77 @@ a.link {
   font-weight: 800;
   text-decoration: underline;
 }
+
+/* ===== Guía de inicio (onboarding) ===== */
+.onb-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  background: rgba(42, 29, 16, 0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+.onb-card {
+  background: var(--paper);
+  border: 3px solid var(--border-strong);
+  border-radius: 20px;
+  max-width: 400px;
+  width: 100%;
+  padding: 22px;
+  text-align: center;
+  box-shadow: 0 12px 34px rgba(0, 0, 0, 0.4);
+}
+.onb-skip {
+  display: block;
+  margin-left: auto;
+  background: none;
+  border: none;
+  color: var(--muted);
+  font-weight: 700;
+  font-size: 0.95rem;
+  text-decoration: underline;
+  cursor: pointer;
+  padding: 2px 0;
+}
+.onb-emoji {
+  font-size: 58px;
+  line-height: 1;
+  margin-top: 4px;
+}
+.onb-card h2 {
+  font-family: var(--font-head);
+  color: var(--leather-dark);
+  font-size: 1.5rem;
+  margin: 10px 0;
+}
+.onb-card p {
+  font-size: 1.08rem;
+  line-height: 1.5;
+  color: var(--text);
+  font-weight: 500;
+  margin: 0 0 4px;
+}
+.onb-dots {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+  margin: 18px 0 14px;
+}
+.onb-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+  background: var(--border);
+}
+.onb-dot.active {
+  background: var(--leather);
+}
+.onb-row {
+  display: flex;
+  gap: 10px;
+}
+.onb-row .btn {
+  flex: 1;
+}
