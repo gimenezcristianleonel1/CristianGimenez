@@ -2,10 +2,12 @@ import { db } from './db';
 import { uuid } from '../lib/uuid';
 import type {
   AnimalStatus,
+  CheckType,
   HealthEventType,
   LocationType,
   MovementReason,
   OutboxOp,
+  PregnancyStatus,
   Sex,
   Species,
   TaskStatus,
@@ -322,6 +324,50 @@ export async function setTaskStatus(taskId: string, status: TaskStatus): Promise
     entityTable: 'tasks',
     entityId: taskId,
   });
+}
+
+// ------------------------------------------------------ Reproductivo
+
+export interface NewReproCheckInput {
+  animalId: string;
+  potreroId: string;
+  type: CheckType;
+  result: PregnancyStatus;
+  observations?: string;
+}
+
+/** Registra un chequeo reproductivo local (optimista) y lo encola para sync. */
+export async function createReproCheck(input: NewReproCheckInput): Promise<string> {
+  const id = uuid();
+  const date = new Date().toISOString();
+  await db.reproChecks.add({
+    id,
+    animalId: input.animalId,
+    potreroId: input.potreroId,
+    type: input.type,
+    result: input.result,
+    observations: input.observations ?? null,
+    date,
+    _dirty: 1,
+  });
+  await enqueue({
+    id: uuid(),
+    kind: 'reproductive.create',
+    method: 'POST',
+    path: '/reproductive',
+    body: {
+      id,
+      animalId: input.animalId,
+      potreroId: input.potreroId,
+      type: input.type,
+      result: input.result,
+      observations: input.observations || undefined,
+      date,
+    },
+    entityTable: 'reproChecks',
+    entityId: id,
+  });
+  return id;
 }
 
 // ---------------------------------------------------------------- Masivo

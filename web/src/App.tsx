@@ -9,6 +9,9 @@ import LocationNew from './pages/LocationNew';
 import LocationEdit from './pages/LocationEdit';
 import Import from './pages/Import';
 import Planificacion from './pages/Planificacion';
+import Analisis from './pages/Analisis';
+import CargaPotreros from './pages/CargaPotreros';
+import Reproductivo from './pages/Reproductivo';
 
 export default function App() {
   return (
@@ -23,6 +26,9 @@ export default function App() {
         <Route path="locations/:id" element={<LocationEdit />} />
         <Route path="import" element={<Import />} />
         <Route path="tasks" element={<Planificacion />} />
+        <Route path="analisis" element={<Analisis />} />
+        <Route path="analisis/carga" element={<CargaPotreros />} />
+        <Route path="analisis/reproductivo" element={<Reproductivo />} />
       </Route>
     </Routes>
   );

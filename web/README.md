@@ -32,6 +32,17 @@ campo sin conexión a internet**. Todo lo que se registra se guarda en el dispos
   cualquier pantalla** sin entrar a la sección. Se recalcula solo (offline) al completar tareas.
 - Las tareas cumplidas se agrupan en una sección aparte. Todo sincroniza solo.
 
+## 📊 Sección Análisis
+
+- **Carga por potrero (EV/Ha):** carga animal real de cada potrero en **Equivalente
+  Vaca por hectárea**. El EV de cada animal se infiere por categoría (sexo + edad, con
+  overrides en `metadata`) y se calcula **en el dispositivo** (offline). Avisa si un
+  potrero no tiene hectáreas o si la carga es alta (sobrepastoreo).
+- **Reproductivo (tacto / ecografía):** trabajo de manga. Elegís el potrero y marcás
+  cada animal como **preñada / vacía**; el **resumen del lote** (total, % preñez, %
+  vacías + alerta si vacías > 15%) se actualiza **al instante y sin conexión**. Cada
+  chequeo se encola y **sincroniza** al backend (`POST /reproductive`).
+
 ## 📥 Sección Importar
 
 - **Drag & drop** de Excel: fuzzy matching de columnas; si hay encabezados desconocidos

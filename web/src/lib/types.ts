@@ -97,6 +97,21 @@ export interface TaskRow {
   _dirty?: number;
 }
 
+export type CheckType = 'TACTO' | 'ECOGRAFIA';
+/** El cliente usa PRENADA (ASCII); la BD guarda "PREÑADA" (@map en Prisma). */
+export type PregnancyStatus = 'PRENADA' | 'VACIA';
+
+export interface ReproCheckRow {
+  id: string;
+  animalId: string;
+  potreroId: string;
+  type: CheckType;
+  result: PregnancyStatus;
+  observations: string | null;
+  date: string;
+  _dirty?: number;
+}
+
 /** A queued API call to be replayed against the backend when online. */
 export interface OutboxOp {
   id: string;
@@ -111,11 +126,19 @@ export interface OutboxOp {
     | 'health.create'
     | 'movement.create'
     | 'task.create'
-    | 'task.update';
+    | 'task.update'
+    | 'reproductive.create';
   method: 'POST' | 'PATCH' | 'DELETE';
   path: string;
   body: Record<string, unknown>;
-  entityTable: 'animals' | 'locations' | 'weights' | 'health' | 'movements' | 'tasks';
+  entityTable:
+    | 'animals'
+    | 'locations'
+    | 'weights'
+    | 'health'
+    | 'movements'
+    | 'tasks'
+    | 'reproChecks';
   entityId: string;
   attempts: number;
   createdAt: string;

@@ -65,6 +65,9 @@ export default function Layout() {
           </span>
           <span>Tareas</span>
         </NavLink>
+        <NavLink to="/analisis" className={({ isActive }) => (isActive ? 'active' : '')}>
+          📊<span>Análisis</span>
+        </NavLink>
         <NavLink to="/import" className={({ isActive }) => (isActive ? 'active' : '')}>
           📥<span>Importar</span>
         </NavLink>
