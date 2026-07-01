@@ -55,6 +55,8 @@ async function bootstrap(): Promise<void> {
       .addTag('Movements', 'Traslados de animales entre ubicaciones')
       .addTag('Import', 'Importación de Excel/fotos y exportación de animales')
       .addTag('Tasks', 'Planificación y tareas del campo con alertas de vencimiento')
+      .addTag('Reports', 'Reportes productivos: carga animal por potrero en EV/Ha')
+      .addTag('Reproductive', 'Diagnóstico reproductivo (tacto/ecografía) e índices de preñez')
       .build();
 
     const document = SwaggerModule.createDocument(app, swaggerConfig);

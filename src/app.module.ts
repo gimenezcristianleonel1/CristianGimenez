@@ -14,6 +14,8 @@ import { HealthModule } from '@modules/health/health.module';
 import { ImportModule } from '@modules/import/import.module';
 import { LocationsModule } from '@modules/locations/locations.module';
 import { MovementsModule } from '@modules/movements/movements.module';
+import { ReportsModule } from '@modules/reports/reports.module';
+import { ReproductiveModule } from '@modules/reproductive/reproductive.module';
 import { SanitaryModule } from '@modules/sanitary/sanitary.module';
 import { TasksModule } from '@modules/tasks/tasks.module';
 
@@ -46,6 +48,8 @@ import { TasksModule } from '@modules/tasks/tasks.module';
     SanitaryModule,
     MovementsModule,
     TasksModule,
+    ReportsModule,
+    ReproductiveModule,
   ],
   providers: [
     // Authentication is required by default; routes opt out with @Public().

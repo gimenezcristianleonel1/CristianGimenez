@@ -96,6 +96,19 @@ enum TaskStatus {
   COMPLETED
 }
 
+/// Tipo de trabajo de diagnóstico reproductivo en la manga.
+enum CheckType {
+  TACTO
+  ECOGRAFIA
+}
+
+/// Resultado del diagnóstico. El valor de BD conserva el acento ("PREÑADA");
+/// el identificador del cliente es ASCII (PRENADA) por límite de Prisma.
+enum PregnancyStatus {
+  PRENADA @map("PREÑADA")
+  VACIA
+}
+
 // ------------------------------------------------------------
 //  User (identidad - "Sign in with Google")
 // ------------------------------------------------------------
@@ -142,6 +155,7 @@ model Establishment {
   locations       Location[]
   importTemplates ImportTemplate[]
   tasks           Task[]
+  reproductiveChecks ReproductiveCheck[]
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
@@ -240,6 +254,7 @@ model Animal {
   healthRecords HealthRecord[]
   movements     AnimalMovement[]
   photo         AnimalPhoto?
+  reproductiveChecks ReproductiveCheck[]
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
@@ -418,4 +433,34 @@ model OutboxEvent {
 
   @@index([status, occurredAt])
   @@map("outbox_events")
+}
+
+// ------------------------------------------------------------
+//  ReproductiveCheck (diagnóstico de tacto / ecografía en la manga)
+// ------------------------------------------------------------
+
+model ReproductiveCheck {
+  id     String          @id @default(uuid()) @db.Uuid
+  date   DateTime        @default(now())
+  type   CheckType
+  result PregnancyStatus
+  observations String?
+
+  /// Animal controlado.
+  animalId String @map("animal_id") @db.Uuid
+  animal   Animal @relation(fields: [animalId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  /// Potrero donde se encontraba el lote al momento del trabajo.
+  potreroId String @map("potrero_id") @db.Uuid
+
+  /// Establecimiento dueño del registro (multi-tenancy).
+  establishmentId String        @map("establishment_id") @db.Uuid
+  establishment   Establishment @relation(fields: [establishmentId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([establishmentId])
+  @@index([potreroId])
+  @@index([animalId])
+  @@map("reproductive_checks")
 }
