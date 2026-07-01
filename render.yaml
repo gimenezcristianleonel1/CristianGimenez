@@ -1,0 +1,43 @@
+# ============================================================
+#  Render Blueprint - Backend (NestJS) + PostgreSQL (capa gratuita)
+#  Despliegue: Render -> New + -> Blueprint -> conectá este repo.
+#  (También podés hacerlo manual: ver DEPLOY-RENDER.md)
+# ============================================================
+databases:
+  - name: livestock-db
+    plan: free
+    databaseName: livestock
+    user: ganadero
+
+services:
+  - type: web
+    name: livestock-api
+    runtime: node
+    plan: free
+    # Health check para que Render sepa que la API está viva (ruta pública).
+    healthCheckPath: /api/v1/health
+    # --include=dev asegura que se instalen las devDeps (nest CLI, typescript)
+    # aunque NODE_ENV=production. Luego genera el cliente Prisma y compila.
+    buildCommand: npm install --include=dev && npx prisma generate && npm run build
+    # Aplica migraciones pendientes y arranca el server de producción.
+    startCommand: npx prisma migrate deploy && npm run start:prod
+    envVars:
+      - key: NODE_ENV
+        value: production
+      # Inyectada automáticamente desde la base de datos de arriba.
+      - key: DATABASE_URL
+        fromDatabase:
+          name: livestock-db
+          property: connectionString
+      # Render genera un secreto aleatorio seguro la primera vez.
+      - key: JWT_SECRET
+        generateValue: true
+      - key: JWT_EXPIRES_IN
+        value: 30d
+      # Se setean a mano en el panel (ver DEPLOY-RENDER.md):
+      #   CORS_ORIGIN     -> URL de tu sitio en Netlify
+      #   GOOGLE_CLIENT_ID-> sólo si usás login con Google (opcional)
+      - key: CORS_ORIGIN
+        sync: false
+      - key: GOOGLE_CLIENT_ID
+        sync: false

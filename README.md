@@ -80,6 +80,17 @@ Variables útiles (en `.env` de la raíz, todas opcionales con defaults):
 `JWT_SECRET`, `POSTGRES_PASSWORD`, `WEB_PORT`, `API_PORT`, `VITE_API_URL`,
 `GOOGLE_CLIENT_ID` / `VITE_GOOGLE_CLIENT_ID` (sólo si querés login con Google).
 
+## ☁️ Despliegue en producción (Render + Netlify)
+
+- **Backend + PostgreSQL → Render** (capa gratuita): hay un **Blueprint** listo
+  ([`render.yaml`](./render.yaml)) y una **guía paso a paso** con las variables exactas
+  a copiar/pegar en [`DEPLOY-RENDER.md`](./DEPLOY-RENDER.md).
+- **Frontend → Netlify** (carpeta `/web`, ver [`netlify.toml`](./netlify.toml)). Una vez
+  que Render te dé la URL pública, seteá en Netlify:
+  `VITE_API_URL = https://TU-BACKEND.onrender.com/api/v1` y volvé a desplegar.
+- El backend ya toma el puerto dinámico de la plataforma (`process.env.PORT`) y lee
+  `DATABASE_URL`, `JWT_SECRET` y `GOOGLE_CLIENT_ID` desde variables de entorno.
+
 ---
 
 ## 🧱 Stack Tecnológico

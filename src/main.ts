@@ -62,9 +62,10 @@ async function bootstrap(): Promise<void> {
     });
   }
 
-  await app.listen(port);
+  // Bind to 0.0.0.0 so PaaS platforms (Render, Railway, etc.) can route traffic.
+  await app.listen(port, '0.0.0.0');
   // eslint-disable-next-line no-console
-  console.log(`🐄 Livestock Management API running on http://localhost:${port}/${apiPrefix}`);
+  console.log(`🐄 Livestock Management API running on port ${port} (prefix /${apiPrefix})`);
 }
 
 void bootstrap();
