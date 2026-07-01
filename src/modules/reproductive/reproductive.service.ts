@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { PregnancyStatus, Prisma, ReproductiveCheck } from '@prisma/client';
 import { ReproductiveRepository } from './reproductive.repository';
 import { CreateReproductiveCheckDto } from './dto/create-reproductive-check.dto';
@@ -26,6 +26,13 @@ export class ReproductiveService {
 
   /** Registra un chequeo individual, validando que animal y potrero sean del establecimiento. */
   async create(establishmentId: string, dto: CreateReproductiveCheckDto): Promise<ReproductiveCheck> {
+    // Idempotencia para el sync offline: un reintento con el mismo id de cliente
+    // devuelve el chequeo ya guardado (no falla ni duplica, la cola no se traba).
+    if (dto.id) {
+      const existing = await this.repo.findById(dto.id);
+      if (existing) return this.ownedOrConflict(existing, establishmentId);
+    }
+
     const [animalOk, potreroOk] = await Promise.all([
       this.repo.animalBelongsToEstablishment(dto.animalId, establishmentId),
       this.repo.locationBelongsToEstablishment(dto.potreroId, establishmentId),
@@ -43,7 +50,24 @@ export class ReproductiveService {
       potreroId: dto.potreroId,
       establishment: { connect: { id: establishmentId } },
     };
-    return this.repo.create(data);
+
+    try {
+      return await this.repo.create(data);
+    } catch (err) {
+      if (dto.id && err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2002') {
+        const existing = await this.repo.findById(dto.id);
+        if (existing) return this.ownedOrConflict(existing, establishmentId);
+      }
+      throw err;
+    }
+  }
+
+  /** Devuelve el chequeo si es del establecimiento; si no, es una colisión ajena. */
+  private ownedOrConflict(check: ReproductiveCheck, establishmentId: string): ReproductiveCheck {
+    if (check.establishmentId !== establishmentId) {
+      throw new ConflictException(`ReproductiveCheck ${check.id} already exists`);
+    }
+    return check;
   }
 
   /**

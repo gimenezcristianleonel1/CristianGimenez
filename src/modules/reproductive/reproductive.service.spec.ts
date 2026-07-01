@@ -9,6 +9,7 @@ describe('ReproductiveService', () => {
   let service: ReproductiveService;
   let repo: {
     create: jest.Mock;
+    findById: jest.Mock;
     animalBelongsToEstablishment: jest.Mock;
     locationBelongsToEstablishment: jest.Mock;
     countByResultForPotrero: jest.Mock;
@@ -17,6 +18,7 @@ describe('ReproductiveService', () => {
   beforeEach(() => {
     repo = {
       create: jest.fn((data) => Promise.resolve({ id: 'chk-1', ...data })),
+      findById: jest.fn().mockResolvedValue(null),
       animalBelongsToEstablishment: jest.fn().mockResolvedValue(true),
       locationBelongsToEstablishment: jest.fn().mockResolvedValue(true),
       countByResultForPotrero: jest.fn(),
@@ -51,6 +53,16 @@ describe('ReproductiveService', () => {
       repo.locationBelongsToEstablishment.mockResolvedValue(false);
       await expect(service.create(EST, dto)).rejects.toBeInstanceOf(NotFoundException);
       expect(repo.create).not.toHaveBeenCalled();
+    });
+
+    it('es idempotente: si el id del cliente ya existe, devuelve el chequeo sin duplicar', async () => {
+      const existing = { id: 'dup', establishmentId: EST };
+      repo.findById.mockResolvedValue(existing);
+      const res = await service.create(EST, { ...dto, id: 'dup' });
+      expect(res).toBe(existing);
+      expect(repo.create).not.toHaveBeenCalled();
+      // No revalida ni intenta insertar: corta por idempotencia.
+      expect(repo.animalBelongsToEstablishment).not.toHaveBeenCalled();
     });
   });
 

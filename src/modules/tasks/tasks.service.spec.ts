@@ -1,4 +1,4 @@
-import { NotFoundException } from '@nestjs/common';
+import { ConflictException, NotFoundException } from '@nestjs/common';
 import { Task, TaskStatus } from '@prisma/client';
 import { TasksService } from './tasks.service';
 import { TasksRepository } from './tasks.repository';
@@ -60,6 +60,30 @@ describe('TasksService', () => {
       ]);
       const res = await service.findAll(EST);
       expect(res.notification).toBeNull();
+    });
+  });
+
+  describe('create (idempotente para sync)', () => {
+    it('devuelve la tarea existente sin duplicar cuando el id del cliente ya existe', async () => {
+      const existing = buildTask({ id: 'dup', title: 'Ya creada' });
+      repo.findById.mockResolvedValue(existing);
+      const res = await service.create(EST, { id: 'dup', title: 'Ya creada' });
+      expect(res).toBe(existing);
+      expect(repo.create).not.toHaveBeenCalled();
+    });
+
+    it('crea normalmente cuando el id no existe', async () => {
+      repo.findById.mockResolvedValue(null);
+      repo.create.mockResolvedValue(buildTask({ id: 'new' }));
+      await service.create(EST, { id: 'new', title: 'Nueva' });
+      expect(repo.create).toHaveBeenCalledTimes(1);
+    });
+
+    it('una colisión de id con otro establecimiento es un conflicto (no 500)', async () => {
+      repo.findById.mockResolvedValue(buildTask({ id: 'dup', establishmentId: 'otro' }));
+      await expect(service.create(EST, { id: 'dup', title: 'X' })).rejects.toBeInstanceOf(
+        ConflictException,
+      );
     });
   });
 

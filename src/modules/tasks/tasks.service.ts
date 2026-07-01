@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma, Task, TaskStatus } from '@prisma/client';
 import { TasksRepository } from './tasks.repository';
 import { CreateTaskDto } from './dto/create-task.dto';
@@ -25,6 +25,14 @@ export class TasksService {
   constructor(private readonly repo: TasksRepository) {}
 
   async create(establishmentId: string, dto: CreateTaskDto): Promise<Task> {
+    // Idempotencia para el sync offline: si ya existe una tarea con el id del
+    // cliente, la devolvemos tal cual. Así un reintento (la red se cortó después
+    // de que el server guardó) no falla ni duplica, y la cola no se traba.
+    if (dto.id) {
+      const existing = await this.repo.findById(dto.id);
+      if (existing) return this.ownedOrConflict(existing, establishmentId);
+    }
+
     const data: Prisma.TaskCreateInput = {
       ...(dto.id ? { id: dto.id } : {}),
       title: dto.title,
@@ -32,7 +40,26 @@ export class TasksService {
       dueDate: dto.dueDate ? new Date(dto.dueDate) : null,
       establishment: { connect: { id: establishmentId } },
     };
-    return this.repo.create(data);
+
+    try {
+      return await this.repo.create(data);
+    } catch (err) {
+      // Carrera entre dos reintentos casi simultáneos: si chocó la PK, devolvemos
+      // la tarea ya creada en vez de un 500.
+      if (dto.id && err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2002') {
+        const existing = await this.repo.findById(dto.id);
+        if (existing) return this.ownedOrConflict(existing, establishmentId);
+      }
+      throw err;
+    }
+  }
+
+  /** Devuelve la tarea si es del establecimiento; si no, es una colisión de id ajena. */
+  private ownedOrConflict(task: Task, establishmentId: string): Task {
+    if (task.establishmentId !== establishmentId) {
+      throw new ConflictException(`Task ${task.id} already exists`);
+    }
+    return task;
   }
 
   /**

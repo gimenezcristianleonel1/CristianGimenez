@@ -11,6 +11,10 @@ export class ReproductiveRepository {
     return this.prisma.reproductiveCheck.create({ data });
   }
 
+  findById(id: string): Promise<ReproductiveCheck | null> {
+    return this.prisma.reproductiveCheck.findUnique({ where: { id } });
+  }
+
   /** ¿Existe el animal y pertenece al establecimiento? (aislamiento multi-tenant). */
   animalBelongsToEstablishment(animalId: string, establishmentId: string): Promise<boolean> {
     return this.prisma.animal
