@@ -136,6 +136,14 @@ export class AnimalsService {
   async update(establishmentId: string, id: string, dto: UpdateAnimalDto): Promise<Animal> {
     const animal = await this.getOwnedOrThrow(establishmentId, id);
 
+    // Caravana: única por establecimiento (permitiendo conservar la propia).
+    if (dto.tagId !== undefined && dto.tagId !== animal.tagId) {
+      const existing = await this.repo.findByTagId(establishmentId, dto.tagId);
+      if (existing && existing.id !== id) {
+        throw new ConflictException(`An animal with tagId "${dto.tagId}" already exists`);
+      }
+    }
+
     if (dto.motherId !== undefined) {
       if (dto.motherId === id) throw new BadRequestException('An animal cannot be its own mother');
       await this.assertParent(establishmentId, dto.motherId, Sex.FEMALE, 'mother');
@@ -146,7 +154,14 @@ export class AnimalsService {
     }
 
     const data: Prisma.AnimalUpdateInput = {
+      ...(dto.tagId !== undefined ? { tagId: dto.tagId } : {}),
+      ...(dto.species !== undefined ? { species: dto.species } : {}),
       ...(dto.breed !== undefined ? { breed: dto.breed } : {}),
+      ...(dto.sex !== undefined ? { sex: dto.sex } : {}),
+      ...(dto.birthDate !== undefined ? { birthDate: new Date(dto.birthDate) } : {}),
+      ...(dto.initialWeightKg !== undefined
+        ? { initialWeightKg: new Prisma.Decimal(dto.initialWeightKg) }
+        : {}),
       ...(dto.motherId !== undefined ? { mother: { connect: { id: dto.motherId } } } : {}),
       ...(dto.fatherId !== undefined ? { father: { connect: { id: dto.fatherId } } } : {}),
       ...(dto.metadata !== undefined

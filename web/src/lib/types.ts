@@ -90,6 +90,7 @@ export interface OutboxOp {
   id: string;
   kind:
     | 'animal.create'
+    | 'animal.update'
     | 'animal.status'
     | 'location.create'
     | 'weight.create'

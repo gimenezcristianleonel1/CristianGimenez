@@ -46,7 +46,7 @@ export class ImportController {
     }
     const mapping = this.parseMapping(dto.mapping);
     const saveTemplate = dto.saveTemplate !== 'false';
-    return this.importService.importExcel(est, file.buffer, mapping, saveTemplate);
+    return this.importService.importExcel(est, file.buffer, mapping, saveTemplate, dto.locationId);
   }
 
   @Post('import/photos')

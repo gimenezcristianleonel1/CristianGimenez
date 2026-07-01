@@ -1,5 +1,7 @@
 import { useRef, useState, type DragEvent } from 'react';
+import { useLiveQuery } from 'dexie-react-hooks';
 import { apiUpload, ApiError, downloadFile } from '../api/client';
+import { db } from '../db/db';
 import { useSync } from '../sync/SyncProvider';
 
 type AppField = 'tagId' | 'species' | 'breed' | 'sex' | 'birthDate' | 'initialWeightKg';
@@ -75,6 +77,7 @@ function Dropzone({
 
 export default function Import() {
   const { online, sync } = useSync();
+  const locations = useLiveQuery(() => db.locations.toArray(), [], []);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [result, setResult] = useState<ImportOk | null>(null);
@@ -82,6 +85,7 @@ export default function Import() {
   const [mapSel, setMapSel] = useState<Partial<Record<AppField, string>>>({});
   const [pendingFile, setPendingFile] = useState<File | null>(null);
   const [photos, setPhotos] = useState<PhotoResult | null>(null);
+  const [destLocation, setDestLocation] = useState('');
 
   async function uploadExcel(file: File, mapping?: Partial<Record<AppField, string>>) {
     setBusy(true);
@@ -95,6 +99,7 @@ export default function Import() {
       const fd = new FormData();
       fd.append('file', file);
       if (mapping) fd.append('mapping', JSON.stringify(mapping));
+      if (destLocation) fd.append('locationId', destLocation);
       const res = await apiUpload<ImportOk | RequiresMapping>('/animals/import', fd);
       if (res.status === 'REQUIERE_MAPEO') {
         setNeedMap(res);
@@ -170,6 +175,18 @@ export default function Import() {
           Subí un <strong>.xlsx</strong>. Detectamos automáticamente columnas como
           “N° Caravana”, “RP”, “Peso”, etc.
         </p>
+
+        <label>Asignar a potrero (opcional)</label>
+        <select value={destLocation} onChange={(e) => setDestLocation(e.target.value)}>
+          <option value="">— Sin asignar —</option>
+          {locations.map((l) => (
+            <option key={l.id} value={l.id}>
+              {l.name}
+            </option>
+          ))}
+        </select>
+        <div style={{ height: 10 }} />
+
         <Dropzone
           label="Arrastrá el Excel acá o tocá para elegir"
           accept=".xlsx"

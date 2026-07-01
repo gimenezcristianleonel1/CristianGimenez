@@ -2,7 +2,14 @@ import { useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../db/db';
-import { addHealth, addWeight, changeAnimalStatus, moveAnimal } from '../db/repository';
+import {
+  addHealth,
+  addWeight,
+  changeAnimalStatus,
+  moveAnimal,
+  updateAnimal,
+  type AnimalEditInput,
+} from '../db/repository';
 import { averageDailyGain } from '../lib/gdp';
 import {
   fmtDate,
@@ -13,11 +20,14 @@ import {
   statusLabel,
 } from '../lib/labels';
 import type {
+  Animal,
   AnimalStatus,
   HealthEventType,
   HealthRow,
   LocationRow,
   MovementRow,
+  Sex,
+  Species,
   WeightRow,
 } from '../lib/types';
 
@@ -39,6 +49,7 @@ export default function AnimalDetail() {
     [],
   );
   const [tab, setTab] = useState<Tab>('weights');
+  const [editing, setEditing] = useState(false);
 
   if (animal === undefined) return <div className="empty">Cargando…</div>;
   if (animal === null) return <div className="empty">Animal no encontrado.</div>;
@@ -63,21 +74,37 @@ export default function AnimalDetail() {
           </h2>
           <span className="badge">{statusLabel[animal.status]}</span>
         </div>
-        <div className="sub">
-          {speciesLabel[animal.species]} · {animal.breed} · {sexLabel[animal.sex]}
-        </div>
-        <div className="sub">Nacimiento: {fmtDate(animal.birthDate)}</div>
-        <div className="sub">Ubicación: {locName(animal.currentLocationId)}</div>
-        <div className="sub">
-          Último peso: {lastWeight ? `${Number(lastWeight.weightKg)} kg` : '—'}
-          {adg !== null ? ` · GDP: ${adg} kg/día` : ''}
-        </div>
 
-        <label>Cambiar estado</label>
-        <StatusChanger
-          current={animal.status}
-          onChange={(s) => changeAnimalStatus(id, s)}
-        />
+        {editing ? (
+          <AnimalEditForm
+            animal={animal}
+            onCancel={() => setEditing(false)}
+            onSave={async (changes) => {
+              await updateAnimal(id, changes);
+              setEditing(false);
+            }}
+          />
+        ) : (
+          <>
+            <div className="sub">
+              {speciesLabel[animal.species]} · {animal.breed} · {sexLabel[animal.sex]}
+            </div>
+            <div className="sub">Nacimiento: {fmtDate(animal.birthDate)}</div>
+            <div className="sub">Peso inicial: {Number(animal.initialWeightKg)} kg</div>
+            <div className="sub">Ubicación: {locName(animal.currentLocationId)}</div>
+            <div className="sub">
+              Último peso: {lastWeight ? `${Number(lastWeight.weightKg)} kg` : '—'}
+              {adg !== null ? ` · GDP: ${adg} kg/día` : ''}
+            </div>
+
+            <button className="btn btn-outline" onClick={() => setEditing(true)}>
+              ✏️ Editar datos
+            </button>
+
+            <label>Cambiar estado</label>
+            <StatusChanger current={animal.status} onChange={(s) => changeAnimalStatus(id, s)} />
+          </>
+        )}
       </div>
 
       <div className="tabs">
@@ -311,6 +338,109 @@ function MovementsTab({
           </div>
         ))
       )}
+    </div>
+  );
+}
+
+function AnimalEditForm({
+  animal,
+  onSave,
+  onCancel,
+}: {
+  animal: Animal;
+  onSave: (changes: AnimalEditInput) => Promise<void>;
+  onCancel: () => void;
+}) {
+  const [tagId, setTagId] = useState(animal.tagId);
+  const [species, setSpecies] = useState<Species>(animal.species);
+  const [breed, setBreed] = useState(animal.breed);
+  const [sex, setSex] = useState<Sex>(animal.sex);
+  const [birthDate, setBirthDate] = useState(animal.birthDate.slice(0, 10));
+  const [weight, setWeight] = useState(String(Number(animal.initialWeightKg)));
+  const [error, setError] = useState('');
+  const [saving, setSaving] = useState(false);
+  const today = new Date().toISOString().slice(0, 10);
+
+  async function save() {
+    setError('');
+    if (!tagId.trim()) return setError('La caravana es obligatoria');
+    if (!breed.trim()) return setError('La raza es obligatoria');
+    const w = Number(weight);
+    if (!(w > 0)) return setError('El peso debe ser mayor a 0');
+    if (birthDate > today) return setError('La fecha de nacimiento no puede ser futura');
+
+    // Sólo enviamos lo que cambió.
+    const changes: AnimalEditInput = {};
+    if (tagId.trim() !== animal.tagId) changes.tagId = tagId.trim();
+    if (species !== animal.species) changes.species = species;
+    if (breed.trim() !== animal.breed) changes.breed = breed.trim();
+    if (sex !== animal.sex) changes.sex = sex;
+    if (birthDate !== animal.birthDate.slice(0, 10)) {
+      changes.birthDate = new Date(birthDate).toISOString();
+    }
+    if (w !== Number(animal.initialWeightKg)) changes.initialWeightKg = w;
+
+    setSaving(true);
+    try {
+      await onSave(changes);
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <div>
+      <label>Caravana *</label>
+      <input value={tagId} onChange={(e) => setTagId(e.target.value)} />
+      <div className="row2">
+        <div>
+          <label>Especie</label>
+          <select value={species} onChange={(e) => setSpecies(e.target.value as Species)}>
+            {Object.entries(speciesLabel).map(([k, v]) => (
+              <option key={k} value={k}>
+                {v}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div>
+          <label>Sexo</label>
+          <select value={sex} onChange={(e) => setSex(e.target.value as Sex)}>
+            {Object.entries(sexLabel).map(([k, v]) => (
+              <option key={k} value={k}>
+                {v}
+              </option>
+            ))}
+          </select>
+        </div>
+      </div>
+      <label>Raza *</label>
+      <input value={breed} onChange={(e) => setBreed(e.target.value)} />
+      <div className="row2">
+        <div>
+          <label>Nacimiento</label>
+          <input type="date" max={today} value={birthDate} onChange={(e) => setBirthDate(e.target.value)} />
+        </div>
+        <div>
+          <label>Peso inicial (kg)</label>
+          <input
+            type="number"
+            inputMode="decimal"
+            step="0.1"
+            value={weight}
+            onChange={(e) => setWeight(e.target.value)}
+          />
+        </div>
+      </div>
+      {error && <div className="error">{error}</div>}
+      <div className="row2">
+        <button className="btn btn-outline" style={{ marginTop: 12 }} onClick={onCancel} disabled={saving}>
+          Cancelar
+        </button>
+        <button className="btn" style={{ marginTop: 12 }} onClick={() => void save()} disabled={saving}>
+          {saving ? 'Guardando…' : 'Guardar cambios'}
+        </button>
+      </div>
     </div>
   );
 }

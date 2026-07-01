@@ -61,8 +61,13 @@ Todo scopeado por `establishmentId` (multi-tenant).
 - **`POST /animals/import/photos`** — sube varias imágenes; asocia cada archivo al animal
   cuya **caravana coincide con el nombre** (`2044.jpg` o `caravana_2044.png` → animal 2044).
 - **`GET /animals/export/xlsx`** — exporta todos los animales del establecimiento a Excel.
+- **Asignar a potrero:** el import acepta `locationId` para integrar todos los animales
+  importados a un potrero (también se puede al registrar cada animal).
+- **Edición:** `PATCH /animals/:id` permite modificar caravana, especie, raza, sexo, fecha
+  y peso (con revalidación de caravana única). El frontend tiene un formulario de edición
+  en la ficha del animal (offline-first, se encola y sincroniza).
 - **Frontend:** sección **Importar** con *drag & drop* de Excel e imágenes, selector de
-  mapeo cuando hace falta, y botón de exportación.
+  **potrero de destino**, selector de mapeo cuando hace falta, y botón de exportación.
 
 > Librería: **exceljs** (procesa en memoria). Las fotos se guardan en `animal_photos`
 > (bytea); para gran escala conviene mover a almacenamiento de objetos (S3/Cloudinary).

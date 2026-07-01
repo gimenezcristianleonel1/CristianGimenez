@@ -58,7 +58,16 @@ export class ImportService {
     buffer: Buffer,
     providedMapping?: Partial<Record<AppField, string>>,
     saveTemplate = true,
+    locationId?: string,
   ): Promise<ImportResult | RequiresMappingResult> {
+    // Si se pide asignar a un potrero, validamos una sola vez que sea del establecimiento.
+    if (locationId) {
+      const location = await this.animalsRepo.findLocationById(locationId);
+      if (!location || location.establishmentId !== establishmentId) {
+        throw new BadRequestException('El potrero indicado no existe en tu establecimiento');
+      }
+    }
+
     const { headers, rows } = await this.parseWorkbook(buffer);
     if (headers.length === 0) {
       throw new BadRequestException('El archivo no tiene encabezados válidos');
@@ -108,7 +117,7 @@ export class ImportService {
     let rowNumber = 1; // fila 1 = encabezados
     for (const row of rows) {
       rowNumber++;
-      const dto = this.rowToDto(row, mapping);
+      const dto = this.rowToDto(row, mapping, locationId);
       if (!dto) {
         result.errors.push({ row: rowNumber, message: 'Falta la caravana' });
         continue;
@@ -135,6 +144,7 @@ export class ImportService {
   private rowToDto(
     row: Record<string, unknown>,
     mapping: Partial<Record<AppField, string>>,
+    locationId?: string,
   ): CreateAnimalDto | null {
     const get = (field: AppField): unknown => {
       const header = mapping[field];
@@ -155,6 +165,7 @@ export class ImportService {
       sex: mapping.sex ? normalizeSex(get('sex')) : Sex.FEMALE,
       birthDate: (birth ?? new Date()).toISOString(),
       initialWeightKg: weight && weight > 0 ? weight : 1,
+      ...(locationId ? { currentLocationId: locationId } : {}),
     };
   }
 

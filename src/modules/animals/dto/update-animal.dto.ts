@@ -1,19 +1,52 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import { IsObject, IsOptional, IsString, IsUUID, MaxLength } from 'class-validator';
+import { Sex, Species } from '@prisma/client';
+import {
+  IsEnum,
+  IsObject,
+  IsOptional,
+  IsPositive,
+  IsString,
+  IsUUID,
+  MaxLength,
+} from 'class-validator';
+import { IsNotFutureDate } from '@shared/validators/is-not-future-date.validator';
 
 /**
- * Mutable fields of an animal. Identity-defining and time-series data
- * (tagId, species, sex, birthDate, weights) are intentionally NOT editable
- * here — corrections are made through dedicated, auditable operations.
- * Status changes go through the dedicated status endpoint, and location
- * changes through the movements endpoint (Paso 4).
+ * Campos editables de un animal. La ubicación se cambia por el endpoint de
+ * movimientos (para dejar traza); el estado por el endpoint de estado.
  */
 export class UpdateAnimalDto {
+  @ApiPropertyOptional({ example: 'AR-0001', description: 'Caravana (única por establecimiento)' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(50)
+  tagId?: string;
+
+  @ApiPropertyOptional({ enum: Species })
+  @IsOptional()
+  @IsEnum(Species)
+  species?: Species;
+
   @ApiPropertyOptional({ example: 'Brangus' })
   @IsOptional()
   @IsString()
   @MaxLength(80)
   breed?: string;
+
+  @ApiPropertyOptional({ enum: Sex })
+  @IsOptional()
+  @IsEnum(Sex)
+  sex?: Sex;
+
+  @ApiPropertyOptional({ example: '2024-01-15', description: 'No puede ser futura' })
+  @IsOptional()
+  @IsNotFutureDate({ message: 'birthDate cannot be in the future' })
+  birthDate?: string;
+
+  @ApiPropertyOptional({ example: 46.2, description: 'Peso inicial en kg (> 0)' })
+  @IsOptional()
+  @IsPositive()
+  initialWeightKg?: number;
 
   @ApiPropertyOptional({ description: 'Reasignar madre' })
   @IsOptional()

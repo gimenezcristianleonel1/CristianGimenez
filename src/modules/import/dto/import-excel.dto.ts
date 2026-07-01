@@ -1,5 +1,5 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import { IsOptional, IsString } from 'class-validator';
+import { IsOptional, IsString, IsUUID } from 'class-validator';
 
 /** Campos de texto (multipart) que acompañan al archivo Excel. */
 export class ImportExcelDto {
@@ -16,4 +16,11 @@ export class ImportExcelDto {
   @IsOptional()
   @IsString()
   saveTemplate?: string;
+
+  @ApiPropertyOptional({
+    description: 'ID del potrero/ubicación al que asignar todos los animales importados.',
+  })
+  @IsOptional()
+  @IsUUID()
+  locationId?: string;
 }

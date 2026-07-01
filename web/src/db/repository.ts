@@ -56,6 +56,29 @@ export async function createAnimal(input: NewAnimalInput): Promise<string> {
   return id;
 }
 
+export interface AnimalEditInput {
+  tagId?: string;
+  species?: Species;
+  breed?: string;
+  sex?: Sex;
+  birthDate?: string;
+  initialWeightKg?: number;
+}
+
+/** Edita datos de un animal (optimista local) y encola el PATCH para sync. */
+export async function updateAnimal(animalId: string, changes: AnimalEditInput): Promise<void> {
+  await db.animals.update(animalId, { ...changes, _dirty: 1 });
+  await enqueue({
+    id: uuid(),
+    kind: 'animal.update',
+    method: 'PATCH',
+    path: `/animals/${animalId}`,
+    body: { ...changes },
+    entityTable: 'animals',
+    entityId: animalId,
+  });
+}
+
 export async function changeAnimalStatus(animalId: string, status: AnimalStatus): Promise<void> {
   await db.animals.update(animalId, { status, _dirty: 1 });
   await enqueue({
