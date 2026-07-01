@@ -8,6 +8,7 @@ import type {
   OutboxOp,
   Sex,
   Species,
+  TaskStatus,
   WeightSource,
 } from '../lib/types';
 
@@ -274,6 +275,53 @@ export async function moveAnimal(animalId: string, input: NewMovementInput): Pro
     entityId: id,
   });
   return id;
+}
+
+// ---------------------------------------------------------------- Tareas
+
+export interface NewTaskInput {
+  title: string;
+  description?: string;
+  dueDate?: string; // ISO
+}
+
+/** Crea una tarea local (optimista) y la encola para sync. */
+export async function createTask(input: NewTaskInput): Promise<string> {
+  const id = uuid();
+  await db.tasks.add({
+    id,
+    title: input.title,
+    description: input.description ?? null,
+    status: 'PENDING',
+    dueDate: input.dueDate ?? null,
+    completedAt: null,
+    _dirty: 1,
+  });
+  await enqueue({
+    id: uuid(),
+    kind: 'task.create',
+    method: 'POST',
+    path: '/tasks',
+    body: { id, title: input.title, description: input.description || undefined, dueDate: input.dueDate || undefined },
+    entityTable: 'tasks',
+    entityId: id,
+  });
+  return id;
+}
+
+/** Marca una tarea como cumplida/pendiente (optimista) y encola el PATCH. */
+export async function setTaskStatus(taskId: string, status: TaskStatus): Promise<void> {
+  const completedAt = status === 'COMPLETED' ? new Date().toISOString() : null;
+  await db.tasks.update(taskId, { status, completedAt, _dirty: 1 });
+  await enqueue({
+    id: uuid(),
+    kind: 'task.update',
+    method: 'PATCH',
+    path: `/tasks/${taskId}`,
+    body: { status },
+    entityTable: 'tasks',
+    entityId: taskId,
+  });
 }
 
 // ---------------------------------------------------------------- Masivo

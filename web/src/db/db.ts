@@ -6,6 +6,7 @@ import type {
   LocationRow,
   MovementRow,
   OutboxOp,
+  TaskRow,
   WeightRow,
 } from '../lib/types';
 
@@ -24,6 +25,7 @@ export class LivestockDB extends Dexie {
   movements!: Table<MovementRow, string>;
   outbox!: Table<OutboxOp, string>;
   conflicts!: Table<ConflictRow, string>;
+  tasks!: Table<TaskRow, string>;
 
   constructor() {
     super('livestock');
@@ -35,6 +37,10 @@ export class LivestockDB extends Dexie {
       movements: 'id, animalId, movedAt',
       outbox: 'id, kind, createdAt',
       conflicts: 'id, at',
+    });
+    // v2: planificación y tareas.
+    this.version(2).stores({
+      tasks: 'id, dueDate, status, _dirty',
     });
   }
 }
@@ -49,6 +55,7 @@ export async function clearAllData(): Promise<void> {
     db.weights.clear(),
     db.health.clear(),
     db.movements.clear(),
+    db.tasks.clear(),
     db.outbox.clear(),
     db.conflicts.clear(),
   ]);

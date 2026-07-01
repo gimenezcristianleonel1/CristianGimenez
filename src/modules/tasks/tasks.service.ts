@@ -26,6 +26,7 @@ export class TasksService {
 
   async create(establishmentId: string, dto: CreateTaskDto): Promise<Task> {
     const data: Prisma.TaskCreateInput = {
+      ...(dto.id ? { id: dto.id } : {}),
       title: dto.title,
       description: dto.description ?? null,
       dueDate: dto.dueDate ? new Date(dto.dueDate) : null,

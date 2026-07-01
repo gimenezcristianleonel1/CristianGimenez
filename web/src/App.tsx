@@ -8,6 +8,7 @@ import Locations from './pages/Locations';
 import LocationNew from './pages/LocationNew';
 import LocationEdit from './pages/LocationEdit';
 import Import from './pages/Import';
+import Planificacion from './pages/Planificacion';
 
 export default function App() {
   return (
@@ -21,6 +22,7 @@ export default function App() {
         <Route path="locations/new" element={<LocationNew />} />
         <Route path="locations/:id" element={<LocationEdit />} />
         <Route path="import" element={<Import />} />
+        <Route path="tasks" element={<Planificacion />} />
       </Route>
     </Routes>
   );

@@ -1,7 +1,7 @@
 import { api, ApiError } from '../api/client';
 import { db } from '../db/db';
 import { uuid } from '../lib/uuid';
-import type { Animal, LocationRow } from '../lib/types';
+import type { Animal, LocationRow, TaskRow } from '../lib/types';
 
 export interface SyncResult {
   pushed: number;
@@ -76,12 +76,15 @@ async function fetchAll<T>(basePath: string): Promise<T[]> {
 
 /** Pulls fresh server data into the local store, preserving unsynced edits. */
 async function pullData(result: SyncResult): Promise<void> {
-  const [animals, locations] = await Promise.all([
+  const [animals, locations, tasksResp] = await Promise.all([
     fetchAll<Animal>('/animals'),
     fetchAll<LocationRow>('/locations'),
+    // /tasks devuelve { success, notification, tasks } (sin paginar).
+    api<{ tasks: TaskRow[] }>('/tasks'),
   ]);
+  const tasks = tasksResp.tasks ?? [];
 
-  await db.transaction('rw', db.animals, db.locations, async () => {
+  await db.transaction('rw', db.animals, db.locations, db.tasks, async () => {
     for (const a of animals) {
       const local = await db.animals.get(a.id);
       if (!local?._dirty) {
@@ -93,6 +96,13 @@ async function pullData(result: SyncResult): Promise<void> {
       const local = await db.locations.get(l.id);
       if (!local?._dirty) {
         await db.locations.put({ ...l, _dirty: 0 });
+        result.pulled++;
+      }
+    }
+    for (const t of tasks) {
+      const local = await db.tasks.get(t.id);
+      if (!local?._dirty) {
+        await db.tasks.put({ ...t, _dirty: 0 });
         result.pulled++;
       }
     }

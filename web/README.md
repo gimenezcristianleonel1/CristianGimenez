@@ -22,6 +22,13 @@ campo sin conexión a internet**. Todo lo que se registra se guarda en el dispos
 - **Instalable:** Service Worker (Workbox) precachea la app para que cargue sin red.
 - **Mobile-first:** botones grandes, pensada para el teléfono en el campo.
 
+## 📋 Sección Planificación (Tareas)
+
+- Alta de **tareas** con fecha límite, y **check** para completar/reabrir (offline-first).
+- **Banner de alerta** cuando hay tareas pendientes **vencidas o que vencen en 48 h**
+  (misma lógica que el backend, calculada también localmente para funcionar sin conexión).
+- Las tareas cumplidas se agrupan en una sección aparte. Todo sincroniza solo.
+
 ## 📥 Sección Importar
 
 - **Drag & drop** de Excel: fuzzy matching de columnas; si hay encabezados desconocidos

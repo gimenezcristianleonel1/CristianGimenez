@@ -85,6 +85,18 @@ export interface MovementRow {
   _dirty?: number;
 }
 
+export type TaskStatus = 'PENDING' | 'COMPLETED';
+
+export interface TaskRow {
+  id: string;
+  title: string;
+  description: string | null;
+  status: TaskStatus;
+  dueDate: string | null;
+  completedAt: string | null;
+  _dirty?: number;
+}
+
 /** A queued API call to be replayed against the backend when online. */
 export interface OutboxOp {
   id: string;
@@ -97,11 +109,13 @@ export interface OutboxOp {
     | 'location.delete'
     | 'weight.create'
     | 'health.create'
-    | 'movement.create';
+    | 'movement.create'
+    | 'task.create'
+    | 'task.update';
   method: 'POST' | 'PATCH' | 'DELETE';
   path: string;
   body: Record<string, unknown>;
-  entityTable: 'animals' | 'locations' | 'weights' | 'health' | 'movements';
+  entityTable: 'animals' | 'locations' | 'weights' | 'health' | 'movements' | 'tasks';
   entityId: string;
   attempts: number;
   createdAt: string;
