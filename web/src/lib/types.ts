@@ -93,10 +93,12 @@ export interface OutboxOp {
     | 'animal.update'
     | 'animal.status'
     | 'location.create'
+    | 'location.update'
+    | 'location.delete'
     | 'weight.create'
     | 'health.create'
     | 'movement.create';
-  method: 'POST' | 'PATCH';
+  method: 'POST' | 'PATCH' | 'DELETE';
   path: string;
   body: Record<string, unknown>;
   entityTable: 'animals' | 'locations' | 'weights' | 'health' | 'movements';

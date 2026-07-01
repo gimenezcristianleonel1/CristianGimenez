@@ -29,7 +29,7 @@ export default function Locations() {
             const occ = occupancy(l.id);
             const full = l.capacity != null && occ >= l.capacity;
             return (
-              <div key={l.id} className="list-item">
+              <Link key={l.id} to={`/locations/${l.id}`} className="list-item">
                 <div>
                   <div className="title">
                     {l.name} {l._dirty ? <span className="badge dirty">sin sync</span> : null}
@@ -40,7 +40,7 @@ export default function Locations() {
                   {occ}
                   {l.capacity != null ? `/${l.capacity}` : ''} animales
                 </span>
-              </div>
+              </Link>
             );
           })
       )}

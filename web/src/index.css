@@ -237,6 +237,18 @@ textarea {
   color: var(--green);
   border: 1.5px solid var(--green);
 }
+.btn-danger {
+  background: #fff;
+  color: var(--danger);
+  border: 1.5px solid var(--danger);
+}
+.btn-danger:active {
+  background: var(--danger);
+  color: #fff;
+}
+.btn-danger:disabled {
+  opacity: 0.55;
+}
 .btn-sm {
   padding: 7px 14px;
   font-size: 13px;

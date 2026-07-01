@@ -252,6 +252,8 @@ pesajes (serie temporal) e inteligencia de proyección de peso.
 ### Ubicaciones (`/api/v1/locations`)
 CRUD completo de potreros/corrales/lotes con control de **capacidad** y **ocupación**.
 No se puede reducir la capacidad por debajo de la ocupación ni borrar una ubicación con animales.
+En el **frontend** hay una pantalla de **Gestión de Potreros** (crear/editar/eliminar,
+offline-first) y en el listado de **Animales** un **filtro por potrero**.
 
 ### Movimientos (`/api/v1/animals/:animalId/movements`)
 | Método | Ruta | Descripción |

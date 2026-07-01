@@ -123,6 +123,42 @@ export async function createLocation(input: NewLocationInput): Promise<string> {
   return id;
 }
 
+export interface LocationEditInput {
+  name?: string;
+  type?: LocationType;
+  capacity?: number | null;
+  areaHectares?: number | null;
+  description?: string;
+}
+
+/** Edita un potrero (optimista local) y encola el PATCH para sync. */
+export async function updateLocation(id: string, changes: LocationEditInput): Promise<void> {
+  await db.locations.update(id, { ...changes, _dirty: 1 });
+  await enqueue({
+    id: uuid(),
+    kind: 'location.update',
+    method: 'PATCH',
+    path: `/locations/${id}`,
+    body: { ...changes },
+    entityTable: 'locations',
+    entityId: id,
+  });
+}
+
+/** Elimina un potrero (optimista local) y encola el DELETE para sync. */
+export async function deleteLocation(id: string): Promise<void> {
+  await db.locations.delete(id);
+  await enqueue({
+    id: uuid(),
+    kind: 'location.delete',
+    method: 'DELETE',
+    path: `/locations/${id}`,
+    body: {},
+    entityTable: 'locations',
+    entityId: id,
+  });
+}
+
 export interface NewWeightInput {
   weightKg: number;
   measuredAt?: string;
