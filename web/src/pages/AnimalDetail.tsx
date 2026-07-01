@@ -147,7 +147,13 @@ export default function AnimalDetail() {
           locations={locations.filter((l) => l.id !== animal.currentLocationId)}
         />
       )}
-      {tab === 'events' && <EventsTab animalId={id} events={animalEvents} />}
+      {tab === 'events' && (
+        <EventsTab
+          animalId={id}
+          events={animalEvents}
+          locations={locations.filter((l) => l.id !== animal.currentLocationId)}
+        />
+      )}
     </div>
   );
 }
@@ -483,68 +489,96 @@ const EVENT_META: Record<AnimalEventRow['type'], { icon: string; label: string }
   OTRO: { icon: '•', label: 'Otro' },
 };
 
-function EventsTab({ animalId, events }: { animalId: string; events: AnimalEventRow[] }) {
-  const [mode, setMode] = useState<'NOTA' | 'CONDICION_CORPORAL'>('NOTA');
+type EvMode = 'NOTA' | 'CONDICION_CORPORAL' | 'ABORTO' | 'MUERTE' | 'TRATAMIENTO' | 'CAMBIO_LOTE';
+
+function EventsTab({
+  animalId,
+  events,
+  locations,
+}: {
+  animalId: string;
+  events: AnimalEventRow[];
+  locations: LocationRow[];
+}) {
+  const [mode, setMode] = useState<EvMode>('NOTA');
   const [date, setDate] = useState(new Date().toISOString().slice(0, 10));
   const [note, setNote] = useState('');
   const [score, setScore] = useState('3');
   const [weight, setWeight] = useState('');
+  const [destId, setDestId] = useState('');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
 
   const sorted = [...events].sort((a, b) => b.date.localeCompare(a.date));
   const iso = () => new Date(date + 'T12:00:00').toISOString();
+  const noteLabel = mode === 'NOTA' || mode === 'TRATAMIENTO' ? 'Detalle *' : 'Observación (opcional)';
+
+  function reset() {
+    setNote('');
+    setWeight('');
+    setDestId('');
+  }
 
   async function add() {
     setError('');
+    const needsNote = mode === 'NOTA' || mode === 'TRATAMIENTO';
+    if (needsNote && !note.trim()) return setError('Escribí el detalle');
+    if (mode === 'CAMBIO_LOTE' && !destId) return setError('Elegí el potrero de destino');
+    const w = weight ? Number(weight) : undefined;
+    if (mode === 'CONDICION_CORPORAL' && w !== undefined && !(w > 0)) {
+      return setError('El peso debe ser mayor a 0');
+    }
+
     setSaving(true);
     try {
-      if (mode === 'NOTA') {
-        if (!note.trim()) {
-          setError('Escribí una nota');
-          return;
-        }
-        await createAnimalEvent({ animalId, type: 'NOTA', note: note.trim(), date: iso() });
-        setNote('');
-      } else {
-        const w = weight ? Number(weight) : undefined;
-        if (w !== undefined && !(w > 0)) {
-          setError('El peso debe ser mayor a 0');
-          return;
-        }
+      if (mode === 'CONDICION_CORPORAL') {
         await createAnimalEvent({
-          animalId,
-          type: 'CONDICION_CORPORAL',
-          score: Number(score),
-          weightKg: w,
-          note: note.trim() || undefined,
-          date: iso(),
+          animalId, type: 'CONDICION_CORPORAL', score: Number(score), weightKg: w,
+          note: note.trim() || undefined, date: iso(),
         });
-        // Si además cargó peso, lo sumamos al historial de pesajes (para GDP).
         if (w !== undefined) await addWeight(animalId, { weightKg: w, source: 'MANUAL' });
-        setNote('');
-        setWeight('');
+      } else if (mode === 'CAMBIO_LOTE') {
+        const dest = locations.find((l) => l.id === destId);
+        await createAnimalEvent({
+          animalId, type: 'CAMBIO_LOTE', note: note.trim() || undefined, date: iso(),
+          data: { toLocationId: destId, toName: dest?.name },
+        });
+        // Efecto: mueve el animal de verdad (actualiza ubicación + traza el movimiento).
+        await moveAnimal(animalId, { toLocationId: destId, reason: 'ROTATION', movedAt: iso(), notes: note.trim() || undefined });
+      } else if (mode === 'MUERTE') {
+        await createAnimalEvent({ animalId, type: 'MUERTE', note: note.trim() || undefined, date: iso() });
+        // Efecto: da de baja al animal → el stock se actualiza solo.
+        await changeAnimalStatus(animalId, 'DECEASED');
+      } else {
+        // NOTA / ABORTO / TRATAMIENTO
+        await createAnimalEvent({ animalId, type: mode, note: note.trim() || undefined, date: iso() });
       }
+      reset();
     } finally {
       setSaving(false);
     }
   }
 
+  const TYPES: Array<[EvMode, string]> = [
+    ['NOTA', '📝 Nota'],
+    ['CONDICION_CORPORAL', '⚖️ Condición corporal'],
+    ['TRATAMIENTO', '💉 Tratamiento'],
+    ['ABORTO', '⚠️ Aborto'],
+    ['MUERTE', '💀 Muerte'],
+    ['CAMBIO_LOTE', '🔀 Cambio de lote'],
+  ];
+
   return (
     <div>
       <div className="card">
         <h2>Registrar novedad</h2>
-        <div className="tabs">
-          <button className={`tab ${mode === 'NOTA' ? 'active' : ''}`} onClick={() => setMode('NOTA')}>
-            📝 Nota
-          </button>
-          <button
-            className={`tab ${mode === 'CONDICION_CORPORAL' ? 'active' : ''}`}
-            onClick={() => setMode('CONDICION_CORPORAL')}
-          >
-            ⚖️ Condición corporal
-          </button>
-        </div>
+
+        <label>Tipo</label>
+        <select value={mode} onChange={(e) => setMode(e.target.value as EvMode)}>
+          {TYPES.map(([k, v]) => (
+            <option key={k} value={k}>{v}</option>
+          ))}
+        </select>
 
         <label>Fecha</label>
         <input type="date" value={date} max={new Date().toISOString().slice(0, 10)} onChange={(e) => setDate(e.target.value)} />
@@ -555,27 +589,37 @@ function EventsTab({ animalId, events }: { animalId: string; events: AnimalEvent
               <label>Condición corporal (1–5)</label>
               <select value={score} onChange={(e) => setScore(e.target.value)}>
                 {['1', '1.5', '2', '2.5', '3', '3.5', '4', '4.5', '5'].map((s) => (
-                  <option key={s} value={s}>
-                    {s}
-                  </option>
+                  <option key={s} value={s}>{s}</option>
                 ))}
               </select>
             </div>
             <div>
               <label>Peso (kg, opcional)</label>
-              <input
-                type="number"
-                inputMode="decimal"
-                step="0.1"
-                value={weight}
-                onChange={(e) => setWeight(e.target.value)}
-                placeholder="Ej: 420"
-              />
+              <input type="number" inputMode="decimal" step="0.1" value={weight} onChange={(e) => setWeight(e.target.value)} placeholder="Ej: 420" />
             </div>
           </div>
         )}
 
-        <label>{mode === 'NOTA' ? 'Nota *' : 'Observación (opcional)'}</label>
+        {mode === 'CAMBIO_LOTE' && (
+          <>
+            <label>Potrero de destino *</label>
+            <select value={destId} onChange={(e) => setDestId(e.target.value)}>
+              <option value="">— Elegí destino —</option>
+              {locations.map((l) => (
+                <option key={l.id} value={l.id}>{l.name}</option>
+              ))}
+            </select>
+          </>
+        )}
+
+        {mode === 'MUERTE' && (
+          <div className="alert-warning" style={{ marginBottom: 0 }}>
+            ⚠️ Registrar la muerte da de baja al animal (pasa a “Fallecido”) y el stock se
+            actualiza solo.
+          </div>
+        )}
+
+        <label>{noteLabel}</label>
         <textarea rows={2} value={note} onChange={(e) => setNote(e.target.value)} placeholder="Detalle de la novedad…" />
 
         {error && <div className="error">{error}</div>}
@@ -589,6 +633,7 @@ function EventsTab({ animalId, events }: { animalId: string; events: AnimalEvent
       ) : (
         sorted.map((ev) => {
           const meta = EVENT_META[ev.type];
+          const dest = ev.type === 'CAMBIO_LOTE' ? (ev.data?.toName as string | undefined) : undefined;
           return (
             <div className="list-item" key={ev.id}>
               <div>
@@ -596,6 +641,7 @@ function EventsTab({ animalId, events }: { animalId: string; events: AnimalEvent
                   {meta.icon} {meta.label}
                   {ev.type === 'CONDICION_CORPORAL' && ev.score != null ? ` · CC ${Number(ev.score)}` : ''}
                   {ev.weightKg != null ? ` · ${Number(ev.weightKg)} kg` : ''}
+                  {dest ? ` → ${dest}` : ''}
                 </div>
                 {ev.note ? <div className="sub">{ev.note}</div> : null}
               </div>
