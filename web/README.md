@@ -32,6 +32,13 @@ campo sin conexión a internet**. Todo lo que se registra se guarda en el dispos
   cualquier pantalla** sin entrar a la sección. Se recalcula solo (offline) al completar tareas.
 - Las tareas cumplidas se agrupan en una sección aparte. Todo sincroniza solo.
 
+## 🏠 Dashboard ejecutivo (Inicio)
+
+- **Un solo vistazo** del establecimiento, calculado automáticamente de los datos ya
+  cargados (offline): **stock** de activos, **% preñez**, **% destete** y **mortalidad**.
+- **Stock por categoría** (vacas, vaquillonas, terneros, novillos, toros) inferido por
+  sexo + edad. **Margen** queda pendiente del módulo de costos/ventas.
+
 ## 📊 Sección Análisis
 
 - **Carga por potrero (EV/Ha):** carga animal real de cada potrero en **Equivalente
