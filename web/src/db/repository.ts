@@ -13,8 +13,15 @@ import type {
 
 const DAY = 86_400_000;
 
+/** Evento que avisa que hay algo nuevo en la cola (dispara un sync inmediato). */
+export const OUTBOX_EVENT = 'lg-outbox';
+
 async function enqueue(op: Omit<OutboxOp, 'attempts' | 'createdAt'>): Promise<void> {
   await db.outbox.add({ ...op, attempts: 0, createdAt: new Date().toISOString() });
+  // Notifica al SyncProvider para que sincronice ya (en segundo plano).
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new Event(OUTBOX_EVENT));
+  }
 }
 
 export interface NewAnimalInput {

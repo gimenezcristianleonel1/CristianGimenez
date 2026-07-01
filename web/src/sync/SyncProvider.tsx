@@ -7,14 +7,15 @@ import {
   useState,
   type ReactNode,
 } from 'react';
-import { ping } from '../api/client';
-import { runSync, type SyncResult } from './syncEngine';
+import { OUTBOX_EVENT } from '../db/repository';
+import { flushOutbox, runSync, type SyncResult } from './syncEngine';
 
 interface SyncContextValue {
   online: boolean;
   syncing: boolean;
   lastResult: SyncResult | null;
   lastSyncAt: string | null;
+  /** Sincronización completa (push + pull). */
   sync: () => Promise<void>;
 }
 
@@ -25,35 +26,51 @@ export function SyncProvider({ children }: { children: ReactNode }) {
   const [syncing, setSyncing] = useState(false);
   const [lastResult, setLastResult] = useState<SyncResult | null>(null);
   const [lastSyncAt, setLastSyncAt] = useState<string | null>(null);
-  const syncingRef = useRef(false);
+  const runningRef = useRef(false);
+  const flushTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const sync = useCallback(async () => {
-    if (syncingRef.current) return;
-    const reachable = await ping();
-    setOnline(reachable);
-    if (!reachable) return;
-
-    syncingRef.current = true;
+  // Ejecuta push (+ pull opcional) en segundo plano, sin bloquear la UI ni
+  // hacer un ping previo (evita una ida y vuelta extra contra el backend).
+  const run = useCallback(async (full: boolean) => {
+    if (runningRef.current) return;
+    runningRef.current = true;
     setSyncing(true);
     try {
-      const result = await runSync();
+      const result = full ? await runSync() : await flushOutbox();
       setLastResult(result);
       setLastSyncAt(new Date().toISOString());
+      setOnline(true);
     } catch (err) {
-      // Only a real network failure means we are offline; a server-side error
-      // (e.g. validation) is not a connectivity problem.
+      // Sólo un fallo de red real significa "sin conexión"; un error del
+      // servidor (validación, etc.) no es un problema de conectividad.
       if (err instanceof TypeError) setOnline(false);
     } finally {
-      syncingRef.current = false;
+      runningRef.current = false;
       setSyncing(false);
     }
   }, []);
 
-  // React to browser connectivity changes and auto-sync when coming back online.
+  const sync = useCallback(() => run(true), [run]);
+
+  // Apenas se guarda algo (evento de la cola), sincronizamos ya — con un
+  // pequeño debounce para agrupar ediciones rápidas en un solo push.
+  useEffect(() => {
+    const onOutbox = () => {
+      if (flushTimer.current) clearTimeout(flushTimer.current);
+      flushTimer.current = setTimeout(() => void run(false), 250);
+    };
+    window.addEventListener(OUTBOX_EVENT, onOutbox);
+    return () => {
+      window.removeEventListener(OUTBOX_EVENT, onOutbox);
+      if (flushTimer.current) clearTimeout(flushTimer.current);
+    };
+  }, [run]);
+
+  // Reacciona a los cambios de conectividad del navegador.
   useEffect(() => {
     const goOnline = () => {
       setOnline(true);
-      void sync();
+      void run(true);
     };
     const goOffline = () => setOnline(false);
     window.addEventListener('online', goOnline);
@@ -62,14 +79,14 @@ export function SyncProvider({ children }: { children: ReactNode }) {
       window.removeEventListener('online', goOnline);
       window.removeEventListener('offline', goOffline);
     };
-  }, [sync]);
+  }, [run]);
 
-  // Initial sync + periodic background sync while the app is open.
+  // Sync inicial + pull periódico (más espaciado; el push ya es inmediato).
   useEffect(() => {
-    void sync();
-    const timer = setInterval(() => void sync(), 30_000);
+    void run(true);
+    const timer = setInterval(() => void run(true), 60_000);
     return () => clearInterval(timer);
-  }, [sync]);
+  }, [run]);
 
   return (
     <SyncContext.Provider value={{ online, syncing, lastResult, lastSyncAt, sync }}>

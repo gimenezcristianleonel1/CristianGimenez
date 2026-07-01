@@ -99,6 +99,18 @@ async function pullData(result: SyncResult): Promise<void> {
   });
 }
 
+/**
+ * Fast path: only pushes pending local changes to the API (no pull).
+ * Se usa apenas el usuario guarda algo, para que el badge "sin sincronizar"
+ * se limpie enseguida sin esperar el pull completo.
+ */
+export async function flushOutbox(): Promise<SyncResult> {
+  const result: SyncResult = { pushed: 0, rejected: 0, pulled: 0, remaining: 0, errors: [] };
+  await pushOutbox(result);
+  result.remaining = await db.outbox.count();
+  return result;
+}
+
 /** Full sync: push pending changes, then pull fresh data. */
 export async function runSync(): Promise<SyncResult> {
   const result: SyncResult = { pushed: 0, rejected: 0, pulled: 0, remaining: 0, errors: [] };

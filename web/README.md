@@ -12,8 +12,11 @@ campo sin conexión a internet**. Todo lo que se registra se guarda en el dispos
 - **Cola de sincronización (Outbox del cliente):** cada cambio offline se encola y se
   reenvía al backend al reconectar — con **IDs generados en el cliente** ⇒ idempotente
   (los reintentos no duplican datos).
-- **Sincronización automática:** al recuperar conexión, al abrir la app y cada 30 s.
-  También hay un botón manual *Sincronizar*.
+- **Sincronización automática e inmediata:** apenas guardás algo se dispara un *push*
+  en segundo plano (debounced), así el indicador “sin sincronizar” se limpia en ~1 s sin
+  esperar. El *pull* completo corre al abrir la app, al recuperar conexión y cada 60 s.
+  También hay un botón manual *Sincronizar*. La escritura es siempre **optimista** (local
+  primero) y nunca bloquea la UI esperando la red.
 - **Indicadores claros:** estado en línea / sin conexión, cantidad de cambios
   pendientes y operaciones rechazadas por el servidor.
 - **Instalable:** Service Worker (Workbox) precachea la app para que cargue sin red.
