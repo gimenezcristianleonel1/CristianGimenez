@@ -165,6 +165,7 @@ export default function AnimalDetail() {
       {tab === 'events' && (
         <EventsTab
           animalId={id}
+          currentTag={animal.tagId}
           events={animalEvents}
           locations={locations.filter((l) => l.id !== animal.currentLocationId)}
         />
@@ -513,17 +514,42 @@ const EVENT_META: Record<AnimalEventRow['type'], { icon: string; label: string }
   MUERTE: { icon: '💀', label: 'Muerte' },
   TRATAMIENTO: { icon: '💉', label: 'Tratamiento' },
   CAMBIO_LOTE: { icon: '🔀', label: 'Cambio de lote' },
+  CAMBIO_CARAVANA: { icon: '🏷️', label: 'Cambio de caravana' },
+  INGRESO: { icon: '📥', label: 'Ingreso' },
+  EGRESO: { icon: '📤', label: 'Egreso / Venta' },
+  REVISION_TORO: { icon: '🐂', label: 'Revisión de toro' },
   OTRO: { icon: '•', label: 'Otro' },
 };
 
-type EvMode = 'NOTA' | 'CONDICION_CORPORAL' | 'ABORTO' | 'MUERTE' | 'TRATAMIENTO' | 'CAMBIO_LOTE';
+/** Detalle inline de un evento según su tipo (CC, peso, destino, cambio de caravana). */
+function eventExtra(ev: AnimalEventRow): string {
+  const bits: string[] = [];
+  if (ev.type === 'CONDICION_CORPORAL' && ev.score != null) bits.push(`CC ${Number(ev.score)}`);
+  if (ev.weightKg != null) bits.push(`${Number(ev.weightKg)} kg`);
+  if (ev.type === 'CAMBIO_LOTE' && ev.data?.toName) bits.push(`→ ${ev.data.toName as string}`);
+  if (ev.type === 'CAMBIO_CARAVANA' && ev.data?.to) bits.push(`${ev.data.from as string} → ${ev.data.to as string}`);
+  return bits.length ? ` · ${bits.join(' · ')}` : '';
+}
+
+type EvMode =
+  | 'NOTA'
+  | 'CONDICION_CORPORAL'
+  | 'ABORTO'
+  | 'MUERTE'
+  | 'TRATAMIENTO'
+  | 'CAMBIO_LOTE'
+  | 'CAMBIO_CARAVANA'
+  | 'EGRESO'
+  | 'REVISION_TORO';
 
 function EventsTab({
   animalId,
+  currentTag,
   events,
   locations,
 }: {
   animalId: string;
+  currentTag: string;
   events: AnimalEventRow[];
   locations: LocationRow[];
 }) {
@@ -533,6 +559,7 @@ function EventsTab({
   const [score, setScore] = useState('3');
   const [weight, setWeight] = useState('');
   const [destId, setDestId] = useState('');
+  const [newTag, setNewTag] = useState('');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
 
@@ -544,6 +571,7 @@ function EventsTab({
     setNote('');
     setWeight('');
     setDestId('');
+    setNewTag('');
   }
 
   async function add() {
@@ -551,6 +579,7 @@ function EventsTab({
     const needsNote = mode === 'NOTA' || mode === 'TRATAMIENTO';
     if (needsNote && !note.trim()) return setError('Escribí el detalle');
     if (mode === 'CAMBIO_LOTE' && !destId) return setError('Elegí el potrero de destino');
+    if (mode === 'CAMBIO_CARAVANA' && !newTag.trim()) return setError('Escribí la nueva caravana');
     const w = weight ? Number(weight) : undefined;
     if (mode === 'CONDICION_CORPORAL' && w !== undefined && !(w > 0)) {
       return setError('El peso debe ser mayor a 0');
@@ -572,12 +601,22 @@ function EventsTab({
         });
         // Efecto: mueve el animal de verdad (actualiza ubicación + traza el movimiento).
         await moveAnimal(animalId, { toLocationId: destId, reason: 'ROTATION', movedAt: iso(), notes: note.trim() || undefined });
+      } else if (mode === 'CAMBIO_CARAVANA') {
+        const to = newTag.trim();
+        await createAnimalEvent({
+          animalId, type: 'CAMBIO_CARAVANA', note: note.trim() || undefined, date: iso(),
+          data: { from: currentTag, to },
+        });
+        // Efecto: actualiza la caravana del animal (la anterior queda en el historial).
+        await updateAnimal(animalId, { tagId: to });
       } else if (mode === 'MUERTE') {
         await createAnimalEvent({ animalId, type: 'MUERTE', note: note.trim() || undefined, date: iso() });
-        // Efecto: da de baja al animal → el stock se actualiza solo.
-        await changeAnimalStatus(animalId, 'DECEASED');
+        await changeAnimalStatus(animalId, 'DECEASED'); // baja → el stock se actualiza solo
+      } else if (mode === 'EGRESO') {
+        await createAnimalEvent({ animalId, type: 'EGRESO', note: note.trim() || undefined, date: iso() });
+        await changeAnimalStatus(animalId, 'SOLD'); // egreso/venta → sale del stock
       } else {
-        // NOTA / ABORTO / TRATAMIENTO
+        // NOTA / ABORTO / TRATAMIENTO / REVISION_TORO
         await createAnimalEvent({ animalId, type: mode, note: note.trim() || undefined, date: iso() });
       }
       reset();
@@ -591,8 +630,11 @@ function EventsTab({
     ['CONDICION_CORPORAL', '⚖️ Condición corporal'],
     ['TRATAMIENTO', '💉 Tratamiento'],
     ['ABORTO', '⚠️ Aborto'],
-    ['MUERTE', '💀 Muerte'],
     ['CAMBIO_LOTE', '🔀 Cambio de lote'],
+    ['CAMBIO_CARAVANA', '🏷️ Cambio de caravana'],
+    ['REVISION_TORO', '🐂 Revisión de toro'],
+    ['EGRESO', '📤 Egreso / Venta'],
+    ['MUERTE', '💀 Muerte'],
   ];
 
   return (
@@ -639,10 +681,23 @@ function EventsTab({
           </>
         )}
 
+        {mode === 'CAMBIO_CARAVANA' && (
+          <>
+            <label>Nueva caravana *</label>
+            <input value={newTag} onChange={(e) => setNewTag(e.target.value)} placeholder={`Actual: ${currentTag}`} />
+          </>
+        )}
+
         {mode === 'MUERTE' && (
           <div className="alert-warning" style={{ marginBottom: 0 }}>
             ⚠️ Registrar la muerte da de baja al animal (pasa a “Fallecido”) y el stock se
             actualiza solo.
+          </div>
+        )}
+        {mode === 'EGRESO' && (
+          <div className="alert-warning" style={{ marginBottom: 0 }}>
+            📤 El egreso marca al animal como “Vendido” y lo saca del stock. Anotá el motivo o
+            precio en el detalle.
           </div>
         )}
 
@@ -658,27 +713,21 @@ function EventsTab({
       {sorted.length === 0 ? (
         <div className="empty">Sin novedades registradas todavía.</div>
       ) : (
-        sorted.map((ev) => {
-          const meta = EVENT_META[ev.type];
-          const dest = ev.type === 'CAMBIO_LOTE' ? (ev.data?.toName as string | undefined) : undefined;
-          return (
-            <div className="list-item" key={ev.id}>
-              <div>
-                <div className="title">
-                  {meta.icon} {meta.label}
-                  {ev.type === 'CONDICION_CORPORAL' && ev.score != null ? ` · CC ${Number(ev.score)}` : ''}
-                  {ev.weightKg != null ? ` · ${Number(ev.weightKg)} kg` : ''}
-                  {dest ? ` → ${dest}` : ''}
-                </div>
-                {ev.note ? <div className="sub">{ev.note}</div> : null}
+        sorted.map((ev) => (
+          <div className="list-item" key={ev.id}>
+            <div>
+              <div className="title">
+                {EVENT_META[ev.type].icon} {EVENT_META[ev.type].label}
+                {eventExtra(ev)}
               </div>
-              <span className="badge">
-                {fmtDate(ev.date)}
-                {ev._dirty ? ' · sin sync' : ''}
-              </span>
+              {ev.note ? <div className="sub">{ev.note}</div> : null}
             </div>
-          );
-        })
+            <span className="badge">
+              {fmtDate(ev.date)}
+              {ev._dirty ? ' · sin sync' : ''}
+            </span>
+          </div>
+        ))
       )}
     </div>
   );
@@ -723,14 +772,9 @@ function HistoryTab({
     ...movements.map((m) => ({ date: m.movedAt, icon: '🔀', label: 'Movimiento', detail: `${locName(m.fromLocationId)} → ${locName(m.toLocationId)}` })),
     ...events.map((ev) => {
       const meta = EVENT_META[ev.type];
-      const dest = ev.type === 'CAMBIO_LOTE' ? (ev.data?.toName as string | undefined) : undefined;
-      const bits = [
-        ev.type === 'CONDICION_CORPORAL' && ev.score != null ? `CC ${Number(ev.score)}` : '',
-        ev.weightKg != null ? `${Number(ev.weightKg)} kg` : '',
-        dest ? `→ ${dest}` : '',
-        ev.note ?? '',
-      ].filter(Boolean);
-      return { date: ev.date, icon: meta.icon, label: meta.label, detail: bits.join(' · ') };
+      const extra = eventExtra(ev).replace(/^ · /, '');
+      const detail = [extra, ev.note ?? ''].filter(Boolean).join(' · ');
+      return { date: ev.date, icon: meta.icon, label: meta.label, detail };
     }),
     ...reproChecks.map((c) => ({ date: c.date, icon: c.type === 'ECOGRAFIA' ? '📡' : '✋', label: c.type === 'ECOGRAFIA' ? 'Ecografía' : 'Tacto', detail: c.result === 'PRENADA' ? 'Preñada' : 'Vacía' })),
     ...reproEvents.map((e) => {

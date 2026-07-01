@@ -123,6 +123,10 @@ export type AnimalEventType =
   | 'MUERTE'
   | 'TRATAMIENTO'
   | 'CAMBIO_LOTE'
+  | 'CAMBIO_CARAVANA'
+  | 'INGRESO'
+  | 'EGRESO'
+  | 'REVISION_TORO'
   | 'OTRO';
 
 export interface AnimalEventRow {
