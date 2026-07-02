@@ -59,10 +59,70 @@ Proyecto ya creado: **`ganaderia-app-db`**
 
 ---
 
+## Seguridad de la base (ya aplicado)
+- **RLS activado** en todas las tablas: la API pública/anon de Supabase queda
+  **sin acceso**; tu app sigue funcionando porque Prisma se conecta como dueño
+  (rol que saltea RLS). No hay que hacer nada más.
+
+## Evitar que Supabase se pause (keep-alive)
+El proyecto free se **pausa tras ~7 días sin uso**. Para evitarlo conviene una
+GitHub Action que lo "toque" cada 2 días.
+
+> Nota: este archivo de workflow hay que crearlo **desde la web de GitHub**
+> (el token automático no tiene permiso para subir workflows).
+
+**Paso A — crear el workflow (1 minuto):**
+1. GitHub → repo → **Add file → Create new file**.
+2. Nombre del archivo: `.github/workflows/keepalive-supabase.yml`
+3. Pegá este contenido y **Commit**:
+
+```yaml
+name: Keep Supabase awake
+
+on:
+  schedule:
+    - cron: '0 6 */2 * *' # cada 2 días, 06:00 UTC
+  workflow_dispatch: {}
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping Supabase REST (genera actividad en la base)
+        env:
+          SUPABASE_URL: https://qpombfovgklcepixudaa.supabase.co
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+        run: |
+          if [ -z "$SUPABASE_ANON_KEY" ]; then
+            echo "Falta el secreto SUPABASE_ANON_KEY."; exit 1
+          fi
+          code=$(curl -s -o /dev/null -w "%{http_code}" --max-time 30 \
+            "$SUPABASE_URL/rest/v1/animals?select=id&limit=1" \
+            -H "apikey: $SUPABASE_ANON_KEY" \
+            -H "Authorization: Bearer $SUPABASE_ANON_KEY")
+          echo "Respuesta HTTP: $code"
+          case "$code" in
+            200|401|403) echo "Proyecto activo."; exit 0 ;;
+            *) echo "Respuesta inesperada ($code)"; exit 1 ;;
+          esac
+```
+
+**Paso B — agregar el secreto con la clave pública:**
+1. GitHub → repo → **Settings → Secrets and variables → Actions → New repository secret**.
+2. Nombre: **`SUPABASE_ANON_KEY`**
+3. Valor: la **Publishable key** (Supabase → Project Settings → API Keys →
+   `sb_publishable_...`). Es pública, segura de usar acá.
+4. (Opcional) Actions → "Keep Supabase awake" → **Run workflow** para probar.
+
+> Igual, si usás la app al menos una vez por semana, nunca se pausa. Y si se
+> pausara, se reactiva sola al volver a entrar; **los datos se conservan**.
+
+## Limpieza en Render (opcional)
+- Al quitar la base gestionada del `render.yaml`, en el próximo **Sync** del
+  Blueprint (o a mano) podés **borrar la base vieja `livestock-db`** en Render.
+  Ya no se usa: `DATABASE_URL` apunta a Supabase.
+
 ## Notas
 - **Costo:** $0. Netlify free (frontend) + Render free (API) + Supabase free (base).
-- **Inactividad:** el proyecto free de Supabase puede **pausarse tras ~1 semana
-  sin uso**; se reactiva solo al volver a usarlo (los datos se conservan). Si el
-  campo queda sin internet mucho tiempo, con abrir la app y sincronizar alcanza.
-- **Backup extra:** además, cada tanto usá **Exportar a Excel** desde la app
-  para tener una copia propia de los animales.
+- **Backup extra:** cada tanto usá **Exportar a Excel** desde la app para tener
+  una copia propia de los animales, independiente de cualquier servidor.
