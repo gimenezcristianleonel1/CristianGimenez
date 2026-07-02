@@ -117,6 +117,29 @@ export async function changeAnimalStatus(animalId: string, status: AnimalStatus)
   });
 }
 
+/** Elimina un animal (optimista local) y encola el DELETE para sincronizar. */
+export async function deleteAnimal(animalId: string): Promise<void> {
+  // Borra el animal y sus registros locales asociados (el backend cascadea).
+  await Promise.all([
+    db.animals.delete(animalId),
+    db.weights.where('animalId').equals(animalId).delete(),
+    db.health.where('animalId').equals(animalId).delete(),
+    db.movements.where('animalId').equals(animalId).delete(),
+    db.animalEvents.where('animalId').equals(animalId).delete(),
+    db.reproChecks.where('animalId').equals(animalId).delete(),
+    db.reproEvents.where('animalId').equals(animalId).delete(),
+  ]);
+  await enqueue({
+    id: uuid(),
+    kind: 'animal.delete',
+    method: 'DELETE',
+    path: `/animals/${animalId}`,
+    body: {},
+    entityTable: 'animals',
+    entityId: animalId,
+  });
+}
+
 export interface NewLocationInput {
   name: string;
   type: LocationType;

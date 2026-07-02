@@ -159,6 +159,7 @@ export interface OutboxOp {
     | 'animal.create'
     | 'animal.update'
     | 'animal.status'
+    | 'animal.delete'
     | 'location.create'
     | 'location.update'
     | 'location.delete'

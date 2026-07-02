@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../db/db';
 import {
@@ -7,6 +7,7 @@ import {
   addWeight,
   changeAnimalStatus,
   createAnimalEvent,
+  deleteAnimal,
   moveAnimal,
   updateAnimal,
   type AnimalEditInput,
@@ -39,6 +40,7 @@ type Tab = 'history' | 'weights' | 'health' | 'movements' | 'events';
 
 export default function AnimalDetail() {
   const { id = '' } = useParams();
+  const navigate = useNavigate();
   const animal = useLiveQuery(() => db.animals.get(id), [id]);
   const locations = useLiveQuery(() => db.locations.toArray(), [], []);
   const weights = useLiveQuery(
@@ -110,23 +112,60 @@ export default function AnimalDetail() {
             </div>
             <div className="sub">Nacimiento: {fmtDate(animal.birthDate)}</div>
             <div className="sub">Peso inicial: {Number(animal.initialWeightKg)} kg</div>
-            <div className="sub">Ubicación: {locName(animal.currentLocationId)}</div>
             <div className="sub">
               Último peso: {lastWeight ? `${Number(lastWeight.weightKg)} kg` : '—'}
               {adg !== null ? ` · GDP: ${adg} kg/día` : ''}
             </div>
             {animal.observations ? (
               <div className="sub" style={{ marginTop: 8, whiteSpace: 'pre-wrap' }}>
-                📝 <strong>Observaciones:</strong> {animal.observations}
+                <strong>Observaciones:</strong> {animal.observations}
               </div>
             ) : null}
 
+            {/* Cambiar potrero directo desde el animal (un toque, deja traza). */}
+            <label>Potrero</label>
+            <select
+              value={animal.currentLocationId ?? ''}
+              onChange={(e) => {
+                const to = e.target.value;
+                if (to && to !== animal.currentLocationId) {
+                  void moveAnimal(id, { toLocationId: to, reason: 'ROTATION' });
+                }
+              }}
+            >
+              <option value="">— Sin asignar —</option>
+              {locations
+                .slice()
+                .sort((a, b) => a.name.localeCompare(b.name))
+                .map((l) => (
+                  <option key={l.id} value={l.id}>
+                    {l.name}
+                  </option>
+                ))}
+            </select>
+
             <button className="btn btn-outline" onClick={() => setEditing(true)}>
-              ✏️ Editar datos
+              Editar datos
             </button>
 
             <label>Cambiar estado</label>
             <StatusChanger current={animal.status} onChange={(s) => changeAnimalStatus(id, s)} />
+
+            <button
+              className="btn btn-danger"
+              onClick={() => {
+                if (
+                  window.confirm(
+                    `¿Eliminar el animal ${animal.tagId}? Se borran también sus pesajes, sanidad, ` +
+                      'movimientos y novedades. Esta acción no se puede deshacer.',
+                  )
+                ) {
+                  void deleteAnimal(id).then(() => navigate('/animals', { replace: true }));
+                }
+              }}
+            >
+              Eliminar animal
+            </button>
           </>
         )}
       </div>
