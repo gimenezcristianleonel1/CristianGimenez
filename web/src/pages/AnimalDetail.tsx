@@ -20,6 +20,7 @@ import {
   ageInMonths,
   effectiveTeeth,
   teethLabel,
+  hasCalfAtFoot,
   TEETH_OPTIONS,
 } from '../lib/ev';
 import {
@@ -91,7 +92,14 @@ export default function AnimalDetail() {
     (a, b) => new Date(b.measuredAt).getTime() - new Date(a.measuredAt).getTime(),
   )[0];
   // Categoría/estado actual, calculado en vivo por edad + boqueo + eventos reproductivos.
-  const stage = classifyStage(animal, reproCountsByAnimal(reproEvents).get(id));
+  const reproCounts = reproCountsByAnimal(reproEvents).get(id);
+  const stage = classifyStage(animal, reproCounts);
+  const stageText =
+    stage === 'VACA'
+      ? hasCalfAtFoot(animal, reproCounts)
+        ? 'Vaca con ternero al pie'
+        : 'Vaca seca'
+      : STAGE_LABEL[stage];
   const months = ageInMonths(animal.birthDate);
   const teeth = effectiveTeeth(animal);
   const ageText =
@@ -128,7 +136,7 @@ export default function AnimalDetail() {
               {speciesLabel[animal.species]} · {animal.breed} · {sexLabel[animal.sex]}
             </div>
             <div className="sub" style={{ marginTop: 4 }}>
-              <span className="badge">{STAGE_LABEL[stage]}</span>{' '}
+              <span className="badge">{stageText}</span>{' '}
               <span className="muted">· automática por edad ({ageText}), boca ({teethLabel(teeth)}) e historia reproductiva</span>
             </div>
             <div className="sub">Nacimiento: {fmtDate(animal.birthDate)}</div>

@@ -101,8 +101,15 @@ export interface ReproCounts {
   servicios: number;
   pariciones: number;
   destetes: number;
+  /** Ternero al pie: última parición posterior al último destete. */
+  calfAtFoot: boolean;
 }
-const NO_REPRO: ReproCounts = { servicios: 0, pariciones: 0, destetes: 0 };
+const NO_REPRO: ReproCounts = {
+  servicios: 0,
+  pariciones: 0,
+  destetes: 0,
+  calfAtFoot: false,
+};
 
 const STAGE_TO_GROUP: Record<AnimalStage, CategoryGroup> = {
   TERNERA: 'terneros',
@@ -230,15 +237,38 @@ function stageToCategory(stage: AnimalStage, hasCalfAtFoot: boolean): CowCategor
   }
 }
 
-/** Cuenta servicios, pariciones y destetes por animal (eventos reproductivos). */
+/**
+ * Cuenta servicios, pariciones y destetes por animal, y determina si tiene
+ * ternero al pie (última parición posterior al último destete registrado).
+ */
 export function reproCountsByAnimal(events: ReproEventRow[]): Map<string, ReproCounts> {
   const map = new Map<string, ReproCounts>();
+  const lastParicion = new Map<string, string>();
+  const lastDestete = new Map<string, string>();
   for (const e of events) {
-    const cur = map.get(e.animalId) ?? { servicios: 0, pariciones: 0, destetes: 0 };
+    const cur = map.get(e.animalId) ?? {
+      servicios: 0,
+      pariciones: 0,
+      destetes: 0,
+      calfAtFoot: false,
+    };
     if (e.type === 'SERVICIO') cur.servicios += 1;
-    else if (e.type === 'PARICION') cur.pariciones += 1;
-    else if (e.type === 'DESTETE') cur.destetes += 1;
+    else if (e.type === 'PARICION') {
+      cur.pariciones += 1;
+      const prev = lastParicion.get(e.animalId);
+      if (!prev || e.date > prev) lastParicion.set(e.animalId, e.date);
+    } else if (e.type === 'DESTETE') {
+      cur.destetes += 1;
+      const prev = lastDestete.get(e.animalId);
+      if (!prev || e.date > prev) lastDestete.set(e.animalId, e.date);
+    }
     map.set(e.animalId, cur);
+  }
+  // Ternero al pie: parió y todavía no la destetó (o la parición es más reciente).
+  for (const [animalId, counts] of map) {
+    const par = lastParicion.get(animalId);
+    const des = lastDestete.get(animalId);
+    counts.calfAtFoot = !!par && (!des || par > des);
   }
   return map;
 }
@@ -263,10 +293,17 @@ export function groupOfAnimal(
   return STAGE_TO_GROUP[classifyStage(animal, repro, now)];
 }
 
+/** ¿Tiene ternero al pie? Automático por eventos (parición vs. destete) o marca manual. */
+export function hasCalfAtFoot(
+  animal: Pick<Animal, 'metadata'>,
+  repro: ReproCounts = NO_REPRO,
+): boolean {
+  return repro.calfAtFoot || readMeta(animal.metadata).hasCalfAtFoot;
+}
+
 export function cowEquivalent(
   animal: Pick<Animal, 'sex' | 'birthDate' | 'metadata'>,
   repro: ReproCounts = NO_REPRO,
 ): number {
-  const meta = readMeta(animal.metadata);
-  return EV_BY_CATEGORY[stageToCategory(classifyStage(animal, repro), meta.hasCalfAtFoot)];
+  return EV_BY_CATEGORY[stageToCategory(classifyStage(animal, repro), hasCalfAtFoot(animal, repro))];
 }
