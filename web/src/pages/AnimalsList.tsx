@@ -7,13 +7,21 @@ import { groupOfAnimal, GROUP_LABEL, type CategoryGroup } from '../lib/ev';
 
 export default function AnimalsList() {
   const [q, setQ] = useState('');
-  const [loc, setLoc] = useState(''); // '' = todos · 'none' = sin potrero · <id>
   const [searchParams, setSearchParams] = useSearchParams();
   const animals = useLiveQuery(() => db.animals.toArray(), [], []);
   const locations = useLiveQuery(() => db.locations.toArray(), [], []);
 
   const rawCat = searchParams.get('cat');
   const cat = (rawCat && rawCat in GROUP_LABEL ? rawCat : null) as CategoryGroup | null;
+
+  // Filtro por potrero manejado por la URL ('' = todos · 'none' = sin potrero · <id>).
+  const loc = searchParams.get('loc') ?? '';
+  const setLoc = (v: string) => {
+    const next = new URLSearchParams(searchParams);
+    if (v) next.set('loc', v);
+    else next.delete('loc');
+    setSearchParams(next, { replace: true });
+  };
 
   const clearCat = () => {
     const next = new URLSearchParams(searchParams);

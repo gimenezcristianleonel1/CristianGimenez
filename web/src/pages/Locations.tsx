@@ -9,12 +9,31 @@ export default function Locations() {
 
   const occupancy = (locationId: string) =>
     animals.filter((a) => a.currentLocationId === locationId).length;
+  const unassigned = animals.filter((a) => a.status === 'ACTIVE' && !a.currentLocationId).length;
 
   return (
     <div>
       <div className="section-title">
         <h2>Potreros y corrales ({locations.length})</h2>
       </div>
+
+      {locations.length > 0 && (
+        <Link
+          to="/locations/asignar"
+          className="card"
+          style={{ display: 'flex', alignItems: 'center', gap: 12, textDecoration: 'none' }}
+        >
+          <div style={{ flex: 1 }}>
+            <strong>Asignar animales a potreros</strong>
+            <div className="sub">
+              {unassigned > 0
+                ? `Hay ${unassigned} animal(es) sin potrero. Asignalos en bloque.`
+                : 'Mové o asigná varios animales a la vez.'}
+            </div>
+          </div>
+          {unassigned > 0 && <span className="badge danger">{unassigned}</span>}
+        </Link>
+      )}
 
       {locations.length === 0 ? (
         <div className="empty">

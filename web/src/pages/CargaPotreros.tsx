@@ -1,7 +1,9 @@
+import { Link } from 'react-router-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../db/db';
 import { cowEquivalent } from '../lib/ev';
 import { locationTypeLabel } from '../lib/labels';
+import { Icon } from '../components/Icon';
 
 const round2 = (n: number): number => Math.round(n * 100) / 100;
 /** Carga a partir de la cual se sugiere revisar sobrepastoreo (igual que el backend). */
@@ -50,10 +52,23 @@ export default function CargaPotreros() {
               </div>
 
               <div className="grid2" style={{ marginTop: 12 }}>
-                <div className="stat">
-                  <div className="n">{count}</div>
-                  <div className="l">Animales</div>
-                </div>
+                {count > 0 ? (
+                  <Link
+                    to={`/animals?loc=${l.id}`}
+                    className="stat"
+                    style={{ textDecoration: 'none', position: 'relative' }}
+                  >
+                    <div className="n" style={{ color: 'var(--brand)' }}>{count}</div>
+                    <div className="l" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4 }}>
+                      Ver animales <Icon name="back" size={14} className="flip-x" />
+                    </div>
+                  </Link>
+                ) : (
+                  <div className="stat">
+                    <div className="n">{count}</div>
+                    <div className="l">Animales</div>
+                  </div>
+                )}
                 <div className="stat">
                   <div className="n">{totalEV}</div>
                   <div className="l">EV total</div>

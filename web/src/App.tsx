@@ -7,6 +7,7 @@ import AnimalDetail from './pages/AnimalDetail';
 import Locations from './pages/Locations';
 import LocationNew from './pages/LocationNew';
 import LocationEdit from './pages/LocationEdit';
+import AsignarPotrero from './pages/AsignarPotrero';
 import Import from './pages/Import';
 import Planificacion from './pages/Planificacion';
 import Analisis from './pages/Analisis';
@@ -24,6 +25,7 @@ export default function App() {
         <Route path="animals/new" element={<AnimalNew />} />
         <Route path="animals/:id" element={<AnimalDetail />} />
         <Route path="locations" element={<Locations />} />
+        <Route path="locations/asignar" element={<AsignarPotrero />} />
         <Route path="locations/new" element={<LocationNew />} />
         <Route path="locations/:id" element={<LocationEdit />} />
         <Route path="import" element={<Import />} />

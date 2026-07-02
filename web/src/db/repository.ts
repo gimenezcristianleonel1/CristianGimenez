@@ -518,6 +518,22 @@ export async function bulkMoveByLocation(
 }
 
 /**
+ * Asigna/mueve una lista de animales (por id) a un potrero destino.
+ * Reutiliza moveAnimal por animal (offline-first + idempotente).
+ * Devuelve la cantidad asignada.
+ */
+export async function bulkMoveAnimals(
+  animalIds: string[],
+  toLocationId: string,
+  reason?: MovementReason,
+): Promise<number> {
+  for (const id of animalIds) {
+    await moveAnimal(id, { toLocationId, reason });
+  }
+  return animalIds.length;
+}
+
+/**
  * Aplica un evento sanitario a TODOS los animales de un potrero
  * (p.ej. desparasitación masiva). Devuelve la cantidad tratada.
  */
