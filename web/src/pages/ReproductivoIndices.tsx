@@ -1,7 +1,30 @@
+import { Link } from 'react-router-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../db/db';
 
 const round1 = (n: number): number => Math.round(n * 10) / 10;
+
+/** Tile de KPI que además navega a la lista de animales de ese estado. */
+function KpiLink({
+  to,
+  value,
+  label,
+  color,
+}: {
+  to: string;
+  value: string;
+  label: string;
+  color?: string;
+}) {
+  return (
+    <Link to={to} className="stat" style={{ textDecoration: 'none' }}>
+      <div className="n" style={color ? { color } : undefined}>
+        {value}
+      </div>
+      <div className="l">{label} ›</div>
+    </Link>
+  );
+}
 
 export default function ReproductivoIndices() {
   const checks = useLiveQuery(() => db.reproChecks.toArray(), [], []);
@@ -25,24 +48,45 @@ export default function ReproductivoIndices() {
       <div className="section-title">
         <h2>Índices reproductivos</h2>
       </div>
+
+      {/* Índice total en primera plana */}
+      <Link
+        to="/animals?repro=prenada"
+        className="card"
+        style={{ textDecoration: 'none', textAlign: 'center', display: 'block' }}
+      >
+        <div className="l" style={{ marginBottom: 4 }}>Índice de preñez (total)</div>
+        <div className="n" style={{ color: 'var(--brand)', fontSize: '2.6rem', lineHeight: 1 }}>
+          {denom > 0 ? `${pctPrenez}%` : '—'}
+        </div>
+        <div className="sub" style={{ marginTop: 6 }}>
+          {prenadas} preñadas sobre {denom || 0} {base} · tocá para ver las preñadas ›
+        </div>
+      </Link>
+
       <p className="muted" style={{ marginTop: 0 }}>
-        Calculados automáticamente de tus datos. Base actual: <strong>{base}</strong>{' '}
-        ({denom || 0}).
+        Tocá cualquier indicador para ver los animales que registraste en ese estado.
       </p>
 
       <div className="grid2">
-        <div className="stat">
-          <div className="n" style={{ color: 'var(--brand)' }}>{pctPrenez}%</div>
-          <div className="l">Preñez</div>
-        </div>
-        <div className="stat">
-          <div className="n" style={{ color: 'var(--brand)' }}>{pctParicion}%</div>
-          <div className="l">Parición</div>
-        </div>
-        <div className="stat">
-          <div className="n" style={{ color: 'var(--brand)' }}>{pctDestete}%</div>
-          <div className="l">Destete</div>
-        </div>
+        <KpiLink
+          to="/animals?repro=prenada"
+          value={`${pctPrenez}%`}
+          label="Preñez"
+          color="var(--brand)"
+        />
+        <KpiLink
+          to="/animals?repro=paricion"
+          value={`${pctParicion}%`}
+          label="Parición"
+          color="var(--brand)"
+        />
+        <KpiLink
+          to="/animals?repro=destete"
+          value={`${pctDestete}%`}
+          label="Destete"
+          color="var(--brand)"
+        />
         <div className="stat">
           <div className="n" style={merma > 10 ? { color: 'var(--danger)' } : undefined}>{merma}</div>
           <div className="l">Merma (pts)</div>
@@ -50,12 +94,18 @@ export default function ReproductivoIndices() {
       </div>
 
       <div className="card" style={{ marginTop: 4 }}>
-        <h2>Conteos</h2>
+        <h2>Conteos (tocá para ver los animales)</h2>
         <div className="grid2">
-          <div className="stat"><div className="n">{servicios}</div><div className="l">Servicios</div></div>
-          <div className="stat"><div className="n">{prenadas}</div><div className="l">Preñadas</div></div>
-          <div className="stat"><div className="n">{pariciones}</div><div className="l">Pariciones</div></div>
-          <div className="stat"><div className="n">{destetes}</div><div className="l">Destetes</div></div>
+          <KpiLink to="/animals?repro=servicio" value={`${servicios}`} label="En servicio" />
+          <KpiLink to="/animals?repro=prenada" value={`${prenadas}`} label="Preñadas" />
+          <KpiLink
+            to="/animals?repro=vacia"
+            value={`${vacias}`}
+            label="Vacías"
+            color={vacias > 0 ? 'var(--danger)' : undefined}
+          />
+          <KpiLink to="/animals?repro=paricion" value={`${pariciones}`} label="Paridas" />
+          <KpiLink to="/animals?repro=destete" value={`${destetes}`} label="Destetadas" />
         </div>
       </div>
 

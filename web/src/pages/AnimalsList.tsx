@@ -1,18 +1,34 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../db/db';
 import { speciesLabel, statusLabel } from '../lib/labels';
 import { groupOfAnimal, GROUP_LABEL, type CategoryGroup } from '../lib/ev';
+import { REPRO_LABEL, isReproFilter, animalsForReproFilter } from '../lib/repro';
 
 export default function AnimalsList() {
   const [q, setQ] = useState('');
   const [searchParams, setSearchParams] = useSearchParams();
   const animals = useLiveQuery(() => db.animals.toArray(), [], []);
   const locations = useLiveQuery(() => db.locations.toArray(), [], []);
+  const checks = useLiveQuery(() => db.reproChecks.toArray(), [], []);
+  const events = useLiveQuery(() => db.reproEvents.toArray(), [], []);
 
   const rawCat = searchParams.get('cat');
   const cat = (rawCat && rawCat in GROUP_LABEL ? rawCat : null) as CategoryGroup | null;
+
+  const rawRepro = searchParams.get('repro');
+  const repro = isReproFilter(rawRepro) ? rawRepro : null;
+  const reproIds = useMemo(
+    () => (repro ? animalsForReproFilter(repro, checks, events) : null),
+    [repro, checks, events],
+  );
+
+  const clearRepro = () => {
+    const next = new URLSearchParams(searchParams);
+    next.delete('repro');
+    setSearchParams(next, { replace: true });
+  };
 
   // Filtro por potrero manejado por la URL ('' = todos · 'none' = sin potrero · <id>).
   const loc = searchParams.get('loc') ?? '';
@@ -33,6 +49,7 @@ export default function AnimalsList() {
   const filtered = animals.filter((a) => {
     // Al filtrar por categoría solo aplican los animales activos (así se ve en el resumen).
     if (cat && (a.status !== 'ACTIVE' || groupOfAnimal(a) !== cat)) return false;
+    if (reproIds && !reproIds.has(a.id)) return false;
     if (loc === 'none' && a.currentLocationId) return false;
     if (loc && loc !== 'none' && a.currentLocationId !== loc) return false;
     if (term && !a.tagId.toLowerCase().includes(term) && !a.breed.toLowerCase().includes(term)) {
@@ -48,9 +65,24 @@ export default function AnimalsList() {
     <div>
       <div className="section-title">
         <h2>
-          {cat ? GROUP_LABEL[cat] : 'Animales'} ({filtered.length})
+          {cat ? GROUP_LABEL[cat] : repro ? REPRO_LABEL[repro] : 'Animales'} ({filtered.length})
         </h2>
       </div>
+
+      {repro && (
+        <div
+          className="card"
+          style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px' }}
+        >
+          <span className="sub" style={{ flex: 1 }}>
+            Mostrando <strong>{REPRO_LABEL[repro]}</strong>. Tocá un animal para ver su historial
+            reproductivo.
+          </span>
+          <button className="btn-sm" onClick={clearRepro}>
+            Ver todos
+          </button>
+        </div>
+      )}
 
       {cat && (
         <div
