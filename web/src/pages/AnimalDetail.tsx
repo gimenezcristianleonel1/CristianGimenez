@@ -13,6 +13,7 @@ import {
   type AnimalEditInput,
 } from '../db/repository';
 import { averageDailyGain } from '../lib/gdp';
+import { classifyStage, reproCountsByAnimal, STAGE_LABEL, ageInMonths } from '../lib/ev';
 import {
   fmtDate,
   healthEventLabel,
@@ -81,6 +82,13 @@ export default function AnimalDetail() {
   const lastWeight = [...weights].sort(
     (a, b) => new Date(b.measuredAt).getTime() - new Date(a.measuredAt).getTime(),
   )[0];
+  // Categoría/estado actual, calculado en vivo por edad + eventos reproductivos.
+  const stage = classifyStage(animal, reproCountsByAnimal(reproEvents).get(id));
+  const months = ageInMonths(animal.birthDate);
+  const ageText =
+    months >= 12
+      ? `${Math.floor(months / 12)} año(s)${months % 12 ? ` ${months % 12} m` : ''}`
+      : `${months} mes(es)`;
 
   return (
     <div>
@@ -109,6 +117,10 @@ export default function AnimalDetail() {
           <>
             <div className="sub">
               {speciesLabel[animal.species]} · {animal.breed} · {sexLabel[animal.sex]}
+            </div>
+            <div className="sub" style={{ marginTop: 4 }}>
+              <span className="badge">{STAGE_LABEL[stage]}</span>{' '}
+              <span className="muted">· categoría automática por edad ({ageText}) e historia reproductiva</span>
             </div>
             <div className="sub">Nacimiento: {fmtDate(animal.birthDate)}</div>
             <div className="sub">Peso inicial: {Number(animal.initialWeightKg)} kg</div>

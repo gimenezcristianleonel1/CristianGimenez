@@ -1,4 +1,4 @@
-import type { Animal, Sex } from './types';
+import type { Animal, Sex, ReproEventRow } from './types';
 
 /**
  * Cálculo de Equivalente Vaca (EV), espejo del helper del backend
@@ -49,16 +49,6 @@ export const CATEGORY_LABEL: Record<CowCategory, string> = {
  */
 export type CategoryGroup = 'vacas' | 'vaquillonas' | 'terneros' | 'novillos' | 'toros';
 
-export const GROUP_OF: Record<CowCategory, CategoryGroup> = {
-  VACA_CON_TERNERO: 'vacas',
-  VACA_SECA: 'vacas',
-  VAQUILLONA: 'vaquillonas',
-  TERNERO: 'terneros',
-  NOVILLITO: 'novillos',
-  NOVILLO: 'novillos',
-  TORO: 'toros',
-};
-
 export const GROUP_LABEL: Record<CategoryGroup, string> = {
   vacas: 'Vacas',
   vaquillonas: 'Vaquillonas',
@@ -67,17 +57,61 @@ export const GROUP_LABEL: Record<CategoryGroup, string> = {
   toros: 'Toros',
 };
 
-/** Grupo (Dashboard) al que pertenece un animal. */
-export function groupOfAnimal(
-  animal: Pick<Animal, 'sex' | 'birthDate' | 'metadata'>,
-  now: Date = new Date(),
-): CategoryGroup {
-  return GROUP_OF[classifyCategory(animal.sex, animal.birthDate, animal.metadata, now)];
-}
+// -------------------------------------------------------------- Estados finos
+//
+// Progresión automática (por edad) y por hitos reproductivos:
+//   Hembra: Ternera → Vaquillona → Vaquilla → (1er servicio) Vaquilla en
+//           servicio → (1ra parición) Vaquilla de 1ª parición → (2do
+//           servicio / 2da parición) Vaca.
+//   Macho:  Ternero → Novillito → Novillo (o Toro si es reproductor).
 
-const WEANING_MAX_MONTHS = 12;
-const YOUNG_MAX_MONTHS = 24;
-const HEIFER_MAX_MONTHS = 30;
+export type AnimalStage =
+  | 'TERNERA'
+  | 'VAQUILLONA'
+  | 'VAQUILLA'
+  | 'VAQUILLA_1P'
+  | 'VACA'
+  | 'TERNERO'
+  | 'NOVILLITO'
+  | 'NOVILLO'
+  | 'TORO';
+
+export const STAGE_LABEL: Record<AnimalStage, string> = {
+  TERNERA: 'Ternera',
+  VAQUILLONA: 'Vaquillona',
+  VAQUILLA: 'Vaquilla',
+  VAQUILLA_1P: 'Vaquilla de 1ª parición',
+  VACA: 'Vaca',
+  TERNERO: 'Ternero',
+  NOVILLITO: 'Novillito',
+  NOVILLO: 'Novillo',
+  TORO: 'Toro',
+};
+
+export interface ReproCounts {
+  servicios: number;
+  pariciones: number;
+}
+const NO_REPRO: ReproCounts = { servicios: 0, pariciones: 0 };
+
+const STAGE_TO_GROUP: Record<AnimalStage, CategoryGroup> = {
+  TERNERA: 'terneros',
+  TERNERO: 'terneros',
+  VAQUILLONA: 'vaquillonas',
+  VAQUILLA: 'vaquillonas',
+  VAQUILLA_1P: 'vacas',
+  VACA: 'vacas',
+  NOVILLITO: 'novillos',
+  NOVILLO: 'novillos',
+  TORO: 'toros',
+};
+
+// Umbrales de edad (meses).
+const F_TERNERA_MAX = 18; // hasta 1½ año: ternera
+const F_VAQUILLONA_MAX = 24; // 1½–2 años: vaquillona
+const F_ASSUME_COW = 36; // ≥3 años sin datos reproductivos: se asume vaca
+const M_TERNERO_MAX = 12;
+const M_NOVILLITO_MAX = 24;
 
 export function ageInMonths(birthDate: string, now: Date = new Date()): number {
   const b = new Date(birthDate);
@@ -97,6 +131,89 @@ function readMeta(metadata: Record<string, unknown> | undefined) {
   };
 }
 
+function categoryToStage(category: CowCategory, sex: Sex): AnimalStage {
+  switch (category) {
+    case 'VACA_CON_TERNERO':
+    case 'VACA_SECA':
+      return 'VACA';
+    case 'VAQUILLONA':
+      return 'VAQUILLONA';
+    case 'TERNERO':
+      return sex === 'FEMALE' ? 'TERNERA' : 'TERNERO';
+    case 'NOVILLITO':
+      return 'NOVILLITO';
+    case 'NOVILLO':
+      return 'NOVILLO';
+    case 'TORO':
+      return 'TORO';
+  }
+}
+
+/**
+ * Estado fino del animal, calculado en vivo por edad + eventos reproductivos.
+ * Si el animal tiene una categoría fijada a mano (metadata.category), se respeta.
+ */
+export function classifyStage(
+  animal: Pick<Animal, 'sex' | 'birthDate' | 'metadata'>,
+  repro: ReproCounts = NO_REPRO,
+  now: Date = new Date(),
+): AnimalStage {
+  const meta = readMeta(animal.metadata);
+  if (meta.category) return categoryToStage(meta.category, animal.sex);
+
+  const months = ageInMonths(animal.birthDate, now);
+
+  if (animal.sex === 'MALE') {
+    if (meta.isBull) return 'TORO';
+    if (months < M_TERNERO_MAX) return 'TERNERO';
+    if (months < M_NOVILLITO_MAX) return 'NOVILLITO';
+    return 'NOVILLO';
+  }
+
+  // Hembra: los hitos reproductivos mandan sobre la edad.
+  if (repro.pariciones >= 2 || repro.servicios >= 2) return 'VACA';
+  if (repro.pariciones >= 1) return 'VAQUILLA_1P';
+  if (repro.servicios >= 1) return 'VAQUILLA';
+
+  if (months < F_TERNERA_MAX) return 'TERNERA';
+  if (months < F_VAQUILLONA_MAX) return 'VAQUILLONA';
+  if (months < F_ASSUME_COW) return 'VAQUILLA';
+  return 'VACA';
+}
+
+function stageToCategory(stage: AnimalStage, hasCalfAtFoot: boolean): CowCategory {
+  switch (stage) {
+    case 'TERNERA':
+    case 'TERNERO':
+      return 'TERNERO';
+    case 'VAQUILLONA':
+    case 'VAQUILLA':
+      return 'VAQUILLONA';
+    case 'VAQUILLA_1P':
+      return 'VACA_CON_TERNERO'; // 1ra parición: cría al pie
+    case 'VACA':
+      return hasCalfAtFoot ? 'VACA_CON_TERNERO' : 'VACA_SECA';
+    case 'NOVILLITO':
+      return 'NOVILLITO';
+    case 'NOVILLO':
+      return 'NOVILLO';
+    case 'TORO':
+      return 'TORO';
+  }
+}
+
+/** Cuenta servicios y pariciones por animal a partir de los eventos reproductivos. */
+export function reproCountsByAnimal(events: ReproEventRow[]): Map<string, ReproCounts> {
+  const map = new Map<string, ReproCounts>();
+  for (const e of events) {
+    const cur = map.get(e.animalId) ?? { servicios: 0, pariciones: 0 };
+    if (e.type === 'SERVICIO') cur.servicios += 1;
+    else if (e.type === 'PARICION') cur.pariciones += 1;
+    map.set(e.animalId, cur);
+  }
+  return map;
+}
+
 export function classifyCategory(
   sex: Sex,
   birthDate: string,
@@ -104,20 +221,23 @@ export function classifyCategory(
   now: Date = new Date(),
 ): CowCategory {
   const meta = readMeta(metadata);
-  if (meta.category) return meta.category;
-
-  const months = ageInMonths(birthDate, now);
-  if (sex === 'MALE') {
-    if (meta.isBull) return 'TORO';
-    if (months < WEANING_MAX_MONTHS) return 'TERNERO';
-    if (months < YOUNG_MAX_MONTHS) return 'NOVILLITO';
-    return 'NOVILLO';
-  }
-  if (months < WEANING_MAX_MONTHS) return 'TERNERO';
-  if (months < HEIFER_MAX_MONTHS) return 'VAQUILLONA';
-  return meta.hasCalfAtFoot ? 'VACA_CON_TERNERO' : 'VACA_SECA';
+  const stage = classifyStage({ sex, birthDate, metadata }, NO_REPRO, now);
+  return stageToCategory(stage, meta.hasCalfAtFoot);
 }
 
-export function cowEquivalent(animal: Pick<Animal, 'sex' | 'birthDate' | 'metadata'>): number {
-  return EV_BY_CATEGORY[classifyCategory(animal.sex, animal.birthDate, animal.metadata)];
+/** Grupo (Dashboard) al que pertenece un animal, considerando su historia reproductiva. */
+export function groupOfAnimal(
+  animal: Pick<Animal, 'sex' | 'birthDate' | 'metadata'>,
+  repro: ReproCounts = NO_REPRO,
+  now: Date = new Date(),
+): CategoryGroup {
+  return STAGE_TO_GROUP[classifyStage(animal, repro, now)];
+}
+
+export function cowEquivalent(
+  animal: Pick<Animal, 'sex' | 'birthDate' | 'metadata'>,
+  repro: ReproCounts = NO_REPRO,
+): number {
+  const meta = readMeta(animal.metadata);
+  return EV_BY_CATEGORY[stageToCategory(classifyStage(animal, repro), meta.hasCalfAtFoot)];
 }

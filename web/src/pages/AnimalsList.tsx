@@ -3,7 +3,7 @@ import { Link, useSearchParams } from 'react-router-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../db/db';
 import { speciesLabel, statusLabel } from '../lib/labels';
-import { groupOfAnimal, GROUP_LABEL, type CategoryGroup } from '../lib/ev';
+import { groupOfAnimal, reproCountsByAnimal, GROUP_LABEL, type CategoryGroup } from '../lib/ev';
 import { REPRO_LABEL, isReproFilter, animalsForReproFilter } from '../lib/repro';
 
 export default function AnimalsList() {
@@ -45,10 +45,12 @@ export default function AnimalsList() {
     setSearchParams(next, { replace: true });
   };
 
+  const reproCounts = useMemo(() => reproCountsByAnimal(events), [events]);
+
   const term = q.trim().toLowerCase();
   const filtered = animals.filter((a) => {
     // Al filtrar por categoría solo aplican los animales activos (así se ve en el resumen).
-    if (cat && (a.status !== 'ACTIVE' || groupOfAnimal(a) !== cat)) return false;
+    if (cat && (a.status !== 'ACTIVE' || groupOfAnimal(a, reproCounts.get(a.id)) !== cat)) return false;
     if (reproIds && !reproIds.has(a.id)) return false;
     if (loc === 'none' && a.currentLocationId) return false;
     if (loc && loc !== 'none' && a.currentLocationId !== loc) return false;

@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../db/db';
-import { cowEquivalent } from '../lib/ev';
+import { cowEquivalent, reproCountsByAnimal } from '../lib/ev';
 import { locationTypeLabel } from '../lib/labels';
 import { Icon } from '../components/Icon';
 
@@ -12,13 +12,17 @@ const OVERLOAD_EV_HA = 1.2;
 export default function CargaPotreros() {
   const locations = useLiveQuery(() => db.locations.toArray(), [], []);
   const animals = useLiveQuery(() => db.animals.toArray(), [], []);
+  const events = useLiveQuery(() => db.reproEvents.toArray(), [], []);
 
   const active = animals.filter((a) => a.status === 'ACTIVE');
+  const reproCounts = reproCountsByAnimal(events);
 
   const rows = locations
     .map((l) => {
       const residents = active.filter((a) => a.currentLocationId === l.id);
-      const totalEV = round2(residents.reduce((sum, a) => sum + cowEquivalent(a), 0));
+      const totalEV = round2(
+        residents.reduce((sum, a) => sum + cowEquivalent(a, reproCounts.get(a.id)), 0),
+      );
       const ha = l.areaHectares != null && l.areaHectares !== '' ? Number(l.areaHectares) : null;
       const carga = ha && ha > 0 ? round2(totalEV / ha) : null;
       return { l, count: residents.length, totalEV, ha, carga };

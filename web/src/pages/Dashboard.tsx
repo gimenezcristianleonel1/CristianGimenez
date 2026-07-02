@@ -2,7 +2,7 @@ import { Link } from 'react-router-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../db/db';
 import { useSync } from '../sync/SyncProvider';
-import { classifyCategory, type CategoryGroup } from '../lib/ev';
+import { groupOfAnimal, reproCountsByAnimal, type CategoryGroup } from '../lib/ev';
 import { Icon } from '../components/Icon';
 
 const round1 = (n: number): number => Math.round(n * 10) / 10;
@@ -19,15 +19,12 @@ export default function Dashboard() {
   const active = animals.filter((a) => a.status === 'ACTIVE');
   const deceased = animals.filter((a) => a.status === 'DECEASED').length;
 
-  // Stock por categoría (agrupada), inferida por sexo + edad (offline).
+  // Stock por categoría (agrupada), inferida por sexo + edad + historia
+  // reproductiva (una vaquilla con parición cuenta como vaca, etc.).
+  const reproCounts = reproCountsByAnimal(events);
   const cat = { vacas: 0, vaquillonas: 0, terneros: 0, novillos: 0, toros: 0 };
   for (const a of active) {
-    const c = classifyCategory(a.sex, a.birthDate, a.metadata);
-    if (c === 'VACA_CON_TERNERO' || c === 'VACA_SECA') cat.vacas++;
-    else if (c === 'VAQUILLONA') cat.vaquillonas++;
-    else if (c === 'TERNERO') cat.terneros++;
-    else if (c === 'NOVILLITO' || c === 'NOVILLO') cat.novillos++;
-    else if (c === 'TORO') cat.toros++;
+    cat[groupOfAnimal(a, reproCounts.get(a.id))]++;
   }
 
   // Índices reproductivos (misma lógica que /indices).

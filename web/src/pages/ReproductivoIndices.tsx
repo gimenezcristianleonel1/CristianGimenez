@@ -53,7 +53,7 @@ export default function ReproductivoIndices() {
       <Link
         to="/animals?repro=prenada"
         className="card"
-        style={{ textDecoration: 'none', textAlign: 'center', display: 'block' }}
+        style={{ textDecoration: 'none', textAlign: 'center', display: 'block', color: 'var(--text)' }}
       >
         <div className="l" style={{ marginBottom: 4 }}>Índice de preñez (total)</div>
         <div className="n" style={{ color: 'var(--brand)', fontSize: '2.6rem', lineHeight: 1 }}>
