@@ -27,6 +27,8 @@ export default defineConfig({
       },
       workbox: {
         globPatterns: ['**/*.{js,css,html,svg,jpeg,jpg,png,woff2}'],
+        // Maneja el click de los avisos de tareas (notificationclick).
+        importScripts: ['sw-notifications.js'],
         navigateFallback: '/index.html',
         runtimeCaching: [
           {

@@ -5,6 +5,7 @@ import { useSync } from '../sync/SyncProvider';
 import { useAuth } from '../auth/AuthProvider';
 import { Icon } from './Icon';
 import { CattleHead } from './Logo';
+import { useTaskReminders } from '../lib/useTaskReminders';
 
 export default function Layout() {
   const { online, syncing, sync, lastSyncAt } = useSync();
@@ -12,6 +13,9 @@ export default function Layout() {
   const pending = useLiveQuery(() => db.outbox.count(), [], 0);
   const conflicts = useLiveQuery(() => db.conflicts.count(), [], 0);
   const tasks = useLiveQuery(() => db.tasks.toArray(), [], []);
+
+  // Programa avisos al dispositivo para las tareas pendientes.
+  useTaskReminders();
 
   // Tareas pendientes vencidas o que vencen dentro de 48 h (badge en la nav).
   const soon = Date.now() + 48 * 3600_000;

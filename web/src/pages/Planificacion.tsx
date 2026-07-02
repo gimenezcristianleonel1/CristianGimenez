@@ -3,6 +3,13 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../db/db';
 import { createTask, setTaskStatus } from '../db/repository';
 import type { TaskRow } from '../lib/types';
+import { Icon } from '../components/Icon';
+import {
+  notifSupported,
+  notifPermission,
+  requestNotifPermission,
+  syncTaskReminders,
+} from '../lib/notifications';
 
 const HOUR = 3600_000;
 
@@ -20,6 +27,16 @@ export default function Planificacion() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [showDone, setShowDone] = useState(false);
+  const [perm, setPerm] = useState<NotificationPermission>(notifPermission());
+
+  async function enableNotifications() {
+    const result = await requestNotifPermission();
+    setPerm(result);
+    if (result === 'granted') {
+      // Programar los avisos de las tareas ya cargadas.
+      void syncTaskReminders(await db.tasks.toArray());
+    }
+  }
 
   const now = Date.now();
   const soonThreshold = now + 48 * HOUR;
@@ -64,6 +81,25 @@ export default function Planificacion() {
       <div className="section-title">
         <h2>Planificación ({pending.length})</h2>
       </div>
+
+      {notifSupported() && perm !== 'granted' && (
+        <div className="card" style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+          <Icon name="bell" size={26} />
+          <div style={{ flex: 1 }}>
+            <strong>Avisos en el celular</strong>
+            <div className="sub">
+              {perm === 'denied'
+                ? 'Los avisos están bloqueados. Activalos desde los ajustes del navegador para esta app.'
+                : 'Recibí un aviso un día antes y cuando esté por vencer cada tarea con fecha.'}
+            </div>
+          </div>
+          {perm === 'default' && (
+            <button className="btn-sm" onClick={() => void enableNotifications()}>
+              Activar
+            </button>
+          )}
+        </div>
+      )}
 
       {urgentCount > 0 && (
         <div className="alert-warning">

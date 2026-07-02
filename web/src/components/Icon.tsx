@@ -31,7 +31,8 @@ export type IconName =
   | 'repro'
   | 'wave'
   | 'search'
-  | 'calendar';
+  | 'calendar'
+  | 'bell';
 
 const P: Record<IconName, JSX.Element> = {
   home: <><path d="M3 11l9-7 9 7" /><path d="M6 10v10h12V10" /></>,
@@ -72,6 +73,7 @@ const P: Record<IconName, JSX.Element> = {
   wave: <><path d="M3 10a13 13 0 0118 0" /><path d="M6.5 13a8 8 0 0111 0" /><path d="M10 16a3 3 0 014 0" /></>,
   search: <><circle cx="11" cy="11" r="6" /><path d="M20 20l-4.5-4.5" /></>,
   calendar: <><rect x="4" y="5" width="16" height="16" rx="2" /><path d="M4 9h16M8 3v4M16 3v4" /></>,
+  bell: <><path d="M6 16V11a6 6 0 0112 0v5l2 2H4z" /><path d="M10 20a2 2 0 004 0" /></>,
 };
 
 export function Icon({
