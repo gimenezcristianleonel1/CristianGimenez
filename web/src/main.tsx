@@ -12,6 +12,22 @@ import './index.css';
 // Auto-update the service worker so a new deploy is picked up on next load.
 registerSW({ immediate: true });
 
+// Blindaje del almacenamiento local: pedimos almacenamiento "persistente" para
+// que el navegador NO borre los datos offline (IndexedDB) si le falta espacio.
+// Es best-effort: en algunos navegadores se concede solo si la PWA está
+// instalada o el usuario interactúa; si falla, la app sigue funcionando igual.
+if (typeof navigator !== 'undefined' && navigator.storage?.persist) {
+  navigator.storage
+    .persisted()
+    .then((already) => {
+      if (!already) return navigator.storage.persist();
+      return true;
+    })
+    .catch(() => {
+      /* almacenamiento persistente no disponible: sin efecto */
+    });
+}
+
 /** Shows the app when authenticated, otherwise the Google login screen. */
 function Gate() {
   const { isAuthenticated } = useAuth();
