@@ -1,14 +1,12 @@
 # ============================================================
-#  Render Blueprint - Backend (NestJS) + PostgreSQL (capa gratuita)
+#  Render Blueprint - Backend (NestJS)
+#  Base de datos: PostgreSQL en Supabase (plan free, permanente).
 #  Despliegue: Render -> New + -> Blueprint -> conectá este repo.
 #  (También podés hacerlo manual: ver DEPLOY-RENDER.md)
+#
+#  DATABASE_URL se setea a mano en el panel de Render con la cadena de
+#  conexión "Session pooler" de Supabase (puerto 5432). Ver DEPLOY-SUPABASE.md.
 # ============================================================
-databases:
-  - name: livestock-db
-    plan: free
-    databaseName: livestock
-    user: ganadero
-
 services:
   - type: web
     name: livestock-api
@@ -19,16 +17,15 @@ services:
     # --include=dev asegura que se instalen las devDeps (nest CLI, typescript)
     # aunque NODE_ENV=production. Luego genera el cliente Prisma y compila.
     buildCommand: npm install --include=dev && npx prisma generate && npm run build
-    # Aplica migraciones pendientes y arranca el server de producción.
+    # Aplica migraciones pendientes (crea las tablas en Supabase) y arranca.
     startCommand: npx prisma migrate deploy && npm run start:prod
     envVars:
       - key: NODE_ENV
         value: production
-      # Inyectada automáticamente desde la base de datos de arriba.
+      # Cadena "Session pooler" de Supabase (puerto 5432). Se setea a mano en
+      # el panel de Render -> Environment (no se versiona: es un secreto).
       - key: DATABASE_URL
-        fromDatabase:
-          name: livestock-db
-          property: connectionString
+        sync: false
       # Render genera un secreto aleatorio seguro la primera vez.
       - key: JWT_SECRET
         generateValue: true
