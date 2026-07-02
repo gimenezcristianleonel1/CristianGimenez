@@ -31,11 +31,30 @@ export function CattleHead({ size = 48 }: { size?: number }) {
   );
 }
 
-/** Marca de la app: cabeza + wordmark "Ganader-IA". */
+/** Isotipo real de la marca (vaca + ternero en la "G") sobre su fondo olivo. */
+export function BrandMark({ size = 72, radius }: { size?: number; radius?: number }) {
+  return (
+    <img
+      src="/ICONO.jpeg"
+      width={size}
+      height={size}
+      alt="Ganader-IA"
+      style={{
+        width: size,
+        height: size,
+        borderRadius: radius ?? Math.round(size * 0.22),
+        objectFit: 'cover',
+        display: 'block',
+      }}
+    />
+  );
+}
+
+/** Marca de la app: isotipo + wordmark "Ganader-IA". */
 export function Logo({ size = 72 }: { size?: number }) {
   return (
     <div className="brand">
-      <CattleHead size={size} />
+      <BrandMark size={size} />
       <div className="brand-name">
         Ganader<span className="brand-ia">-IA</span>
       </div>

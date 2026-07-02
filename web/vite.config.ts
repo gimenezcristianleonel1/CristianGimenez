@@ -10,7 +10,7 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: 'autoUpdate',
-      includeAssets: ['favicon.svg', 'icon.svg'],
+      includeAssets: ['ICONO.jpeg'],
       manifest: {
         name: 'Ganader-IA',
         short_name: 'Ganader-IA',
@@ -21,11 +21,12 @@ export default defineConfig({
         orientation: 'portrait',
         start_url: '/',
         icons: [
-          { src: 'icon.svg', sizes: 'any', type: 'image/svg+xml', purpose: 'any maskable' },
+          { src: 'ICONO.jpeg', sizes: '1254x1254', type: 'image/jpeg', purpose: 'any' },
+          { src: 'ICONO.jpeg', sizes: '1254x1254', type: 'image/jpeg', purpose: 'maskable' },
         ],
       },
       workbox: {
-        globPatterns: ['**/*.{js,css,html,svg,woff2}'],
+        globPatterns: ['**/*.{js,css,html,svg,jpeg,jpg,png,woff2}'],
         navigateFallback: '/index.html',
         runtimeCaching: [
           {

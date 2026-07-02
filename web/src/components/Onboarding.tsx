@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useAuth } from '../auth/AuthProvider';
 import { Icon, type IconName } from './Icon';
-import { CattleHead } from './Logo';
+import { BrandMark } from './Logo';
 
 interface Slide {
   icon: IconName | 'brand';
@@ -60,7 +60,7 @@ export default function Onboarding() {
           Saltar tutorial
         </button>
         <div className="onb-emoji">
-          {slide.icon === 'brand' ? <CattleHead size={64} /> : <Icon name={slide.icon} size={56} strokeWidth={1.6} />}
+          {slide.icon === 'brand' ? <BrandMark size={72} /> : <Icon name={slide.icon} size={56} strokeWidth={1.6} />}
         </div>
         <h2>{slide.title}</h2>
         <p>{slide.body}</p>
