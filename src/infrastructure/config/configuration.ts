@@ -19,6 +19,16 @@ export interface AppConfig {
     jwtSecret: string;
     jwtExpiresIn: string;
   };
+  whatsapp: {
+    verifyToken: string;
+    token: string;
+    phoneNumberId: string;
+    establishmentId: string;
+  };
+  gemini: {
+    apiKey: string;
+    model: string;
+  };
 }
 
 export default (): AppConfig => ({
@@ -37,5 +47,15 @@ export default (): AppConfig => ({
     googleClientId: process.env.GOOGLE_CLIENT_ID ?? '',
     jwtSecret: process.env.JWT_SECRET as string,
     jwtExpiresIn: process.env.JWT_EXPIRES_IN ?? '30d',
+  },
+  whatsapp: {
+    verifyToken: process.env.WHATSAPP_VERIFY_TOKEN ?? '',
+    token: process.env.WHATSAPP_TOKEN ?? '',
+    phoneNumberId: process.env.WHATSAPP_PHONE_NUMBER_ID ?? '',
+    establishmentId: process.env.WHATSAPP_ESTABLISHMENT_ID ?? '',
+  },
+  gemini: {
+    apiKey: process.env.GEMINI_API_KEY ?? '',
+    model: process.env.GEMINI_MODEL ?? 'gemini-2.0-flash',
   },
 });
