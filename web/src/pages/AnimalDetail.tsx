@@ -13,7 +13,15 @@ import {
   type AnimalEditInput,
 } from '../db/repository';
 import { averageDailyGain } from '../lib/gdp';
-import { classifyStage, reproCountsByAnimal, STAGE_LABEL, ageInMonths } from '../lib/ev';
+import {
+  classifyStage,
+  reproCountsByAnimal,
+  STAGE_LABEL,
+  ageInMonths,
+  effectiveTeeth,
+  teethLabel,
+  TEETH_OPTIONS,
+} from '../lib/ev';
 import {
   fmtDate,
   healthEventLabel,
@@ -82,9 +90,10 @@ export default function AnimalDetail() {
   const lastWeight = [...weights].sort(
     (a, b) => new Date(b.measuredAt).getTime() - new Date(a.measuredAt).getTime(),
   )[0];
-  // Categoría/estado actual, calculado en vivo por edad + eventos reproductivos.
+  // Categoría/estado actual, calculado en vivo por edad + boqueo + eventos reproductivos.
   const stage = classifyStage(animal, reproCountsByAnimal(reproEvents).get(id));
   const months = ageInMonths(animal.birthDate);
+  const teeth = effectiveTeeth(animal);
   const ageText =
     months >= 12
       ? `${Math.floor(months / 12)} año(s)${months % 12 ? ` ${months % 12} m` : ''}`
@@ -120,7 +129,7 @@ export default function AnimalDetail() {
             </div>
             <div className="sub" style={{ marginTop: 4 }}>
               <span className="badge">{STAGE_LABEL[stage]}</span>{' '}
-              <span className="muted">· categoría automática por edad ({ageText}) e historia reproductiva</span>
+              <span className="muted">· automática por edad ({ageText}), boca ({teethLabel(teeth)}) e historia reproductiva</span>
             </div>
             <div className="sub">Nacimiento: {fmtDate(animal.birthDate)}</div>
             <div className="sub">Peso inicial: {Number(animal.initialWeightKg)} kg</div>
@@ -459,6 +468,11 @@ function AnimalEditForm({
   const [birthDate, setBirthDate] = useState(animal.birthDate.slice(0, 10));
   const [weight, setWeight] = useState(String(Number(animal.initialWeightKg)));
   const [observations, setObservations] = useState(animal.observations ?? '');
+  const meta0 = (animal.metadata ?? {}) as Record<string, unknown>;
+  const [teeth, setTeeth] = useState(
+    typeof meta0.teeth === 'number' ? String(meta0.teeth) : '',
+  );
+  const [entero, setEntero] = useState(meta0.entero === true);
   const [error, setError] = useState('');
   const [saving, setSaving] = useState(false);
   const today = new Date().toISOString().slice(0, 10);
@@ -483,6 +497,18 @@ function AnimalEditForm({
     if (w !== Number(animal.initialWeightKg)) changes.initialWeightKg = w;
     if (observations.trim() !== (animal.observations ?? '').trim()) {
       changes.observations = observations.trim();
+    }
+    // Boqueo / entero → se mezcla con el metadata existente sin pisar otras claves.
+    const newTeeth = teeth === '' ? undefined : Number(teeth);
+    const teethChanged = (typeof meta0.teeth === 'number' ? meta0.teeth : undefined) !== newTeeth;
+    const enteroChanged = (meta0.entero === true) !== entero;
+    if (teethChanged || enteroChanged) {
+      const merged = { ...meta0 } as Record<string, unknown>;
+      if (newTeeth === undefined) delete merged.teeth;
+      else merged.teeth = newTeeth;
+      if (entero) merged.entero = true;
+      else delete merged.entero;
+      changes.metadata = merged;
     }
 
     setSaving(true);
@@ -537,6 +563,21 @@ function AnimalEditForm({
           />
         </div>
       </div>
+      <label>Boqueo — dientes (opcional)</label>
+      <select value={teeth} onChange={(e) => setTeeth(e.target.value)}>
+        <option value="">Automático por edad</option>
+        {TEETH_OPTIONS.map((t) => (
+          <option key={t} value={t}>
+            {teethLabel(t)}
+          </option>
+        ))}
+      </select>
+      {sex === 'MALE' && (
+        <label style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 8 }}>
+          <input type="checkbox" checked={entero} onChange={(e) => setEntero(e.target.checked)} />
+          Macho entero (sin castrar)
+        </label>
+      )}
       <label>Observaciones (opcional)</label>
       <textarea
         rows={3}

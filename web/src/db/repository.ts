@@ -88,6 +88,7 @@ export interface AnimalEditInput {
   birthDate?: string;
   initialWeightKg?: number;
   observations?: string | null;
+  metadata?: Record<string, unknown>;
 }
 
 /** Edita datos de un animal (optimista local) y encola el PATCH para sync. */

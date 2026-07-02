@@ -1,4 +1,4 @@
-import { NavLink, Outlet } from 'react-router-dom';
+import { NavLink, Outlet, Link } from 'react-router-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../db/db';
 import { useSync } from '../sync/SyncProvider';
@@ -27,10 +27,15 @@ export default function Layout() {
     <div className="app">
       <header className="appbar">
         <div className="appbar-row">
-          <h1 className="appbar-title">
+          <Link
+            to="/perfil"
+            className="appbar-title"
+            style={{ textDecoration: 'none', color: 'inherit' }}
+            aria-label="Ver mi perfil y editar el establecimiento"
+          >
             <CattleHead size={26} />
             <span>{establishment?.name ?? 'Ganader-IA'}</span>
-          </h1>
+          </Link>
           <span className={`pill ${online ? 'pill-online' : 'pill-offline'}`}>
             {online ? 'En línea' : 'Sin conexión'}
           </span>

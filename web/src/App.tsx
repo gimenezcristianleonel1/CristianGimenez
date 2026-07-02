@@ -8,6 +8,7 @@ import Locations from './pages/Locations';
 import LocationNew from './pages/LocationNew';
 import LocationEdit from './pages/LocationEdit';
 import AsignarPotrero from './pages/AsignarPotrero';
+import Perfil from './pages/Perfil';
 import Import from './pages/Import';
 import Planificacion from './pages/Planificacion';
 import Analisis from './pages/Analisis';
@@ -21,6 +22,7 @@ export default function App() {
     <Routes>
       <Route element={<Layout />}>
         <Route index element={<Dashboard />} />
+        <Route path="perfil" element={<Perfil />} />
         <Route path="animals" element={<AnimalsList />} />
         <Route path="animals/new" element={<AnimalNew />} />
         <Route path="animals/:id" element={<AnimalDetail />} />

@@ -42,6 +42,8 @@ interface AuthContextValue {
   loginWithEmail: (email: string, password: string) => Promise<void>;
   /** Exchanges a Google ID token for our session (optional). */
   loginWithGoogle: (idToken: string) => Promise<void>;
+  /** Updates the current establishment (name / country) and refreshes the session. */
+  updateEstablishment: (input: { name?: string; country?: string }) => Promise<void>;
   logout: () => void;
 }
 
@@ -98,6 +100,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     [applyLogin],
   );
 
+  const updateEstablishment = useCallback(
+    async (input: { name?: string; country?: string }) => {
+      const updated = await api<Establishment>('/auth/establishment', {
+        method: 'PATCH',
+        body: input,
+      });
+      const prev = getStoredSession();
+      if (!prev) return;
+      const next: Session = { ...prev, establishment: { ...prev.establishment, ...updated } };
+      saveSession(next);
+      setSession(next);
+    },
+    [],
+  );
+
   // The API client fires this when a token is rejected (expired/invalid).
   useEffect(() => {
     const handler = () => setSession(null);
@@ -114,6 +131,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         register,
         loginWithEmail,
         loginWithGoogle,
+        updateEstablishment,
         logout,
       }}
     >

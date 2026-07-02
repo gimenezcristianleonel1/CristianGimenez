@@ -4,6 +4,7 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../db/db';
 import { createAnimal } from '../db/repository';
 import { speciesLabel, sexLabel } from '../lib/labels';
+import { TEETH_OPTIONS, teethLabel } from '../lib/ev';
 import type { Sex, Species } from '../lib/types';
 
 const today = () => new Date().toISOString().slice(0, 10);
@@ -23,8 +24,17 @@ export default function AnimalNew() {
   const [motherId, setMotherId] = useState('');
   const [fatherId, setFatherId] = useState('');
   const [observations, setObservations] = useState('');
+  const [teeth, setTeeth] = useState(''); // '' = automático por edad
+  const [entero, setEntero] = useState(false); // macho sin castrar
   const [error, setError] = useState('');
   const [saving, setSaving] = useState(false);
+
+  const metadata = () => {
+    const m: Record<string, unknown> = {};
+    if (teeth !== '') m.teeth = Number(teeth);
+    if (sex === 'MALE' && entero) m.entero = true;
+    return Object.keys(m).length ? m : undefined;
+  };
 
   const byTag = (a: { tagId: string }, b: { tagId: string }) =>
     a.tagId.localeCompare(b.tagId, 'es', { numeric: true });
@@ -56,6 +66,7 @@ export default function AnimalNew() {
         motherId: motherId || null,
         fatherId: fatherId || null,
         observations: observations.trim() || undefined,
+        metadata: metadata(),
       });
       navigate(`/animals/${id}`, { replace: true });
     } finally {
@@ -113,6 +124,23 @@ export default function AnimalNew() {
           />
         </div>
       </div>
+
+      <label>Boqueo — dientes (opcional)</label>
+      <select value={teeth} onChange={(e) => setTeeth(e.target.value)}>
+        <option value="">Automático por edad</option>
+        {TEETH_OPTIONS.map((t) => (
+          <option key={t} value={t}>
+            {teethLabel(t)}
+          </option>
+        ))}
+      </select>
+
+      {sex === 'MALE' && (
+        <label style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 8 }}>
+          <input type="checkbox" checked={entero} onChange={(e) => setEntero(e.target.checked)} />
+          Macho entero (sin castrar)
+        </label>
+      )}
 
       <label>Potrero / Ubicación</label>
       <select value={currentLocationId} onChange={(e) => setCurrentLocationId(e.target.value)}>

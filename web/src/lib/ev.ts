@@ -59,59 +59,63 @@ export const GROUP_LABEL: Record<CategoryGroup, string> = {
 
 // -------------------------------------------------------------- Estados finos
 //
-// Progresión automática (por edad) y por hitos reproductivos:
-//   Hembra: Ternera → Vaquillona → Vaquilla → (1er servicio) Vaquilla en
-//           servicio → (1ra parición) Vaquilla de 1ª parición → (2do
-//           servicio / 2da parición) Vaca.
-//   Macho:  Ternero → Novillito → Novillo (o Toro si es reproductor).
+// Clasificación oficial (Argentina), recalculada en vivo por edad, cronometría
+// dentaria (boqueo) e historia reproductiva:
+//
+//   Hembras
+//     Ternera ....... del nacimiento al destete (~6–9 meses).
+//     Vaquillona .... destetada hasta su 1ª parición o hasta los 2–3 años.
+//     Vaca .......... parió al menos una vez, o boca con más de 4 dientes.
+//   Machos
+//     Ternero ....... al pie de la madre (hasta ~6–9 meses).
+//     Novillito ..... castrado con hasta 4 dientes (aprox. 1–2 años).
+//     Novillo ....... castrado con más de 4 dientes.
+//     MEJ ........... macho entero joven, hasta 2 dientes.
+//     Toro .......... macho entero con más de 2 dientes (o reproductor).
+//
+//   Cronometría dentaria (dientes incisivos permanentes):
+//     hasta 1 año = 0 · 1–2 años = 2 · 2–3 años = 4 · 3–4 años = 6 · +4 años = 8
 
 export type AnimalStage =
   | 'TERNERA'
   | 'VAQUILLONA'
-  | 'VAQUILLA'
-  | 'VAQUILLA_1P'
   | 'VACA'
   | 'TERNERO'
   | 'NOVILLITO'
   | 'NOVILLO'
+  | 'MEJ'
   | 'TORO';
 
 export const STAGE_LABEL: Record<AnimalStage, string> = {
   TERNERA: 'Ternera',
   VAQUILLONA: 'Vaquillona',
-  VAQUILLA: 'Vaquilla',
-  VAQUILLA_1P: 'Vaquilla de 1ª parición',
   VACA: 'Vaca',
   TERNERO: 'Ternero',
   NOVILLITO: 'Novillito',
   NOVILLO: 'Novillo',
+  MEJ: 'MEJ (macho entero joven)',
   TORO: 'Toro',
 };
 
 export interface ReproCounts {
   servicios: number;
   pariciones: number;
+  destetes: number;
 }
-const NO_REPRO: ReproCounts = { servicios: 0, pariciones: 0 };
+const NO_REPRO: ReproCounts = { servicios: 0, pariciones: 0, destetes: 0 };
 
 const STAGE_TO_GROUP: Record<AnimalStage, CategoryGroup> = {
   TERNERA: 'terneros',
   TERNERO: 'terneros',
   VAQUILLONA: 'vaquillonas',
-  VAQUILLA: 'vaquillonas',
-  VAQUILLA_1P: 'vacas',
   VACA: 'vacas',
   NOVILLITO: 'novillos',
   NOVILLO: 'novillos',
+  MEJ: 'novillos',
   TORO: 'toros',
 };
 
-// Umbrales de edad (meses).
-const F_TERNERA_MAX = 18; // hasta 1½ año: ternera
-const F_VAQUILLONA_MAX = 24; // 1½–2 años: vaquillona
-const F_ASSUME_COW = 36; // ≥3 años sin datos reproductivos: se asume vaca
-const M_TERNERO_MAX = 12;
-const M_NOVILLITO_MAX = 24;
+const WEANING_MONTHS = 8; // destete aproximado (6–9 meses)
 
 export function ageInMonths(birthDate: string, now: Date = new Date()): number {
   const b = new Date(birthDate);
@@ -120,15 +124,44 @@ export function ageInMonths(birthDate: string, now: Date = new Date()): number {
   return Math.max(0, months);
 }
 
+/** Dientes incisivos permanentes estimados por edad (cronometría dentaria). */
+export function teethFromAge(months: number): 0 | 2 | 4 | 6 | 8 {
+  if (months < 12) return 0;
+  if (months < 24) return 2;
+  if (months < 36) return 4;
+  if (months < 48) return 6;
+  return 8;
+}
+
+export const TEETH_OPTIONS: Array<0 | 2 | 4 | 6 | 8> = [0, 2, 4, 6, 8];
+export function teethLabel(n: number): string {
+  if (n <= 0) return 'Dientes de leche (0)';
+  if (n >= 8) return 'Boca llena (8)';
+  return `${n} dientes`;
+}
+
 function readMeta(metadata: Record<string, unknown> | undefined) {
   const meta = metadata ?? {};
   const raw = typeof meta.category === 'string' ? meta.category.toUpperCase() : null;
   const category = raw && raw in EV_BY_CATEGORY ? (raw as CowCategory) : null;
+  const teethRaw = typeof meta.teeth === 'number' ? meta.teeth : Number(meta.teeth);
+  const teeth = Number.isFinite(teethRaw) && teethRaw >= 0 && teethRaw <= 8 ? teethRaw : null;
   return {
     category,
+    teeth,
     hasCalfAtFoot: meta.hasCalfAtFoot === true,
+    entero: meta.entero === true || meta.reproductor === true,
     isBull: meta.isBull === true || meta.reproductor === true || meta.role === 'TORO',
   };
+}
+
+/** Dientes efectivos: el boqueo cargado a mano, o el estimado por edad. */
+export function effectiveTeeth(
+  animal: Pick<Animal, 'birthDate' | 'metadata'>,
+  now: Date = new Date(),
+): number {
+  const meta = readMeta(animal.metadata);
+  return meta.teeth ?? teethFromAge(ageInMonths(animal.birthDate, now));
 }
 
 function categoryToStage(category: CowCategory, sex: Sex): AnimalStage {
@@ -150,8 +183,8 @@ function categoryToStage(category: CowCategory, sex: Sex): AnimalStage {
 }
 
 /**
- * Estado fino del animal, calculado en vivo por edad + eventos reproductivos.
- * Si el animal tiene una categoría fijada a mano (metadata.category), se respeta.
+ * Estado fino del animal, calculado en vivo por edad + boqueo + eventos
+ * reproductivos. Si hay una categoría fijada a mano (metadata.category), se respeta.
  */
 export function classifyStage(
   animal: Pick<Animal, 'sex' | 'birthDate' | 'metadata'>,
@@ -162,23 +195,20 @@ export function classifyStage(
   if (meta.category) return categoryToStage(meta.category, animal.sex);
 
   const months = ageInMonths(animal.birthDate, now);
+  const teeth = meta.teeth ?? teethFromAge(months);
+  const weaned = repro.destetes > 0 || months >= WEANING_MONTHS;
 
-  if (animal.sex === 'MALE') {
-    if (meta.isBull) return 'TORO';
-    if (months < M_TERNERO_MAX) return 'TERNERO';
-    if (months < M_NOVILLITO_MAX) return 'NOVILLITO';
-    return 'NOVILLO';
+  if (animal.sex === 'FEMALE') {
+    if (repro.pariciones >= 1 || teeth > 4) return 'VACA';
+    if (!weaned) return 'TERNERA';
+    return 'VAQUILLONA';
   }
 
-  // Hembra: los hitos reproductivos mandan sobre la edad.
-  if (repro.pariciones >= 2 || repro.servicios >= 2) return 'VACA';
-  if (repro.pariciones >= 1) return 'VAQUILLA_1P';
-  if (repro.servicios >= 1) return 'VAQUILLA';
-
-  if (months < F_TERNERA_MAX) return 'TERNERA';
-  if (months < F_VAQUILLONA_MAX) return 'VAQUILLONA';
-  if (months < F_ASSUME_COW) return 'VAQUILLA';
-  return 'VACA';
+  // Machos
+  if (meta.isBull) return 'TORO';
+  if (!weaned) return 'TERNERO';
+  if (meta.entero) return teeth <= 2 ? 'MEJ' : 'TORO';
+  return teeth <= 4 ? 'NOVILLITO' : 'NOVILLO';
 }
 
 function stageToCategory(stage: AnimalStage, hasCalfAtFoot: boolean): CowCategory {
@@ -187,28 +217,27 @@ function stageToCategory(stage: AnimalStage, hasCalfAtFoot: boolean): CowCategor
     case 'TERNERO':
       return 'TERNERO';
     case 'VAQUILLONA':
-    case 'VAQUILLA':
       return 'VAQUILLONA';
-    case 'VAQUILLA_1P':
-      return 'VACA_CON_TERNERO'; // 1ra parición: cría al pie
     case 'VACA':
       return hasCalfAtFoot ? 'VACA_CON_TERNERO' : 'VACA_SECA';
     case 'NOVILLITO':
       return 'NOVILLITO';
     case 'NOVILLO':
-      return 'NOVILLO';
+    case 'MEJ':
+      return 'NOVILLO'; // torito / macho entero joven ≈ 0.8 EV
     case 'TORO':
       return 'TORO';
   }
 }
 
-/** Cuenta servicios y pariciones por animal a partir de los eventos reproductivos. */
+/** Cuenta servicios, pariciones y destetes por animal (eventos reproductivos). */
 export function reproCountsByAnimal(events: ReproEventRow[]): Map<string, ReproCounts> {
   const map = new Map<string, ReproCounts>();
   for (const e of events) {
-    const cur = map.get(e.animalId) ?? { servicios: 0, pariciones: 0 };
+    const cur = map.get(e.animalId) ?? { servicios: 0, pariciones: 0, destetes: 0 };
     if (e.type === 'SERVICIO') cur.servicios += 1;
     else if (e.type === 'PARICION') cur.pariciones += 1;
+    else if (e.type === 'DESTETE') cur.destetes += 1;
     map.set(e.animalId, cur);
   }
   return map;
