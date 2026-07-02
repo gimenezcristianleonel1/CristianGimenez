@@ -79,7 +79,7 @@ export default function Onboarding() {
           )}
           {isLast ? (
             <button className="btn" style={{ marginTop: 0 }} onClick={close}>
-              ✅ ¡Empezar!
+              ¡Empezar!
             </button>
           ) : (
             <button className="btn" style={{ marginTop: 0 }} onClick={() => setStep((s) => s + 1)}>

@@ -406,7 +406,7 @@ function MovementsTab({
           ))}
         </select>
         <button className="btn" style={{ marginTop: 0 }} disabled={!toLocationId} onClick={() => void move()}>
-          🚚 Mover
+          Mover
         </button>
       </div>
       {sorted.length === 0 ? (
@@ -538,7 +538,7 @@ function AnimalEditForm({
           Cancelar
         </button>
         <button className="btn" style={{ marginTop: 12 }} onClick={() => void save()} disabled={saving}>
-          💾 {saving ? 'Guardando…' : 'Guardar cambios'}
+          {saving ? 'Guardando…' : 'Guardar cambios'}
         </button>
       </div>
     </div>
@@ -546,17 +546,17 @@ function AnimalEditForm({
 }
 
 const EVENT_META: Record<AnimalEventRow['type'], { icon: string; label: string }> = {
-  NOTA: { icon: '📝', label: 'Nota' },
-  CONDICION_CORPORAL: { icon: '⚖️', label: 'Condición corporal' },
-  PARTO: { icon: '🐄', label: 'Parto' },
-  ABORTO: { icon: '⚠️', label: 'Aborto' },
-  MUERTE: { icon: '💀', label: 'Muerte' },
-  TRATAMIENTO: { icon: '💉', label: 'Tratamiento' },
-  CAMBIO_LOTE: { icon: '🔀', label: 'Cambio de lote' },
-  CAMBIO_CARAVANA: { icon: '🏷️', label: 'Cambio de caravana' },
-  INGRESO: { icon: '📥', label: 'Ingreso' },
-  EGRESO: { icon: '📤', label: 'Egreso / Venta' },
-  REVISION_TORO: { icon: '🐂', label: 'Revisión de toro' },
+  NOTA: { icon: '', label: 'Nota' },
+  CONDICION_CORPORAL: { icon: '', label: 'Condición corporal' },
+  PARTO: { icon: '', label: 'Parto' },
+  ABORTO: { icon: '', label: 'Aborto' },
+  MUERTE: { icon: '', label: 'Muerte' },
+  TRATAMIENTO: { icon: '', label: 'Tratamiento' },
+  CAMBIO_LOTE: { icon: '', label: 'Cambio de lote' },
+  CAMBIO_CARAVANA: { icon: '', label: 'Cambio de caravana' },
+  INGRESO: { icon: '', label: 'Ingreso' },
+  EGRESO: { icon: '', label: 'Egreso / Venta' },
+  REVISION_TORO: { icon: '', label: 'Revisión de toro' },
   OTRO: { icon: '•', label: 'Otro' },
 };
 
@@ -665,15 +665,15 @@ function EventsTab({
   }
 
   const TYPES: Array<[EvMode, string]> = [
-    ['NOTA', '📝 Nota'],
-    ['CONDICION_CORPORAL', '⚖️ Condición corporal'],
-    ['TRATAMIENTO', '💉 Tratamiento'],
-    ['ABORTO', '⚠️ Aborto'],
-    ['CAMBIO_LOTE', '🔀 Cambio de lote'],
-    ['CAMBIO_CARAVANA', '🏷️ Cambio de caravana'],
-    ['REVISION_TORO', '🐂 Revisión de toro'],
-    ['EGRESO', '📤 Egreso / Venta'],
-    ['MUERTE', '💀 Muerte'],
+    ['NOTA', 'Nota'],
+    ['CONDICION_CORPORAL', 'Condición corporal'],
+    ['TRATAMIENTO', 'Tratamiento'],
+    ['ABORTO', 'Aborto'],
+    ['CAMBIO_LOTE', 'Cambio de lote'],
+    ['CAMBIO_CARAVANA', 'Cambio de caravana'],
+    ['REVISION_TORO', 'Revisión de toro'],
+    ['EGRESO', 'Egreso / Venta'],
+    ['MUERTE', 'Muerte'],
   ];
 
   return (
@@ -729,13 +729,13 @@ function EventsTab({
 
         {mode === 'MUERTE' && (
           <div className="alert-warning" style={{ marginBottom: 0 }}>
-            ⚠️ Registrar la muerte da de baja al animal (pasa a “Fallecido”) y el stock se
+            Registrar la muerte da de baja al animal (pasa a “Fallecido”) y el stock se
             actualiza solo.
           </div>
         )}
         {mode === 'EGRESO' && (
           <div className="alert-warning" style={{ marginBottom: 0 }}>
-            📤 El egreso marca al animal como “Vendido” y lo saca del stock. Anotá el motivo o
+            El egreso marca al animal como “Vendido” y lo saca del stock. Anotá el motivo o
             precio en el detalle.
           </div>
         )}
@@ -745,7 +745,7 @@ function EventsTab({
 
         {error && <div className="error">{error}</div>}
         <button className="btn" disabled={saving} onClick={() => void add()}>
-          ➕ {saving ? 'Guardando…' : 'Agregar novedad'}
+          {saving ? 'Guardando…' : 'Agregar novedad'}
         </button>
       </div>
 
@@ -800,28 +800,28 @@ function HistoryTab({
   locName: (id: string | null) => string;
 }) {
   const repoEvMeta: Record<ReproEventRow['type'], { icon: string; label: string }> = {
-    SERVICIO: { icon: '🐂', label: 'Servicio' },
-    PARICION: { icon: '🐄', label: 'Parición' },
-    DESTETE: { icon: '🍼', label: 'Destete' },
+    SERVICIO: { icon: '', label: 'Servicio' },
+    PARICION: { icon: '', label: 'Parición' },
+    DESTETE: { icon: '', label: 'Destete' },
   };
 
   const items: TimelineItem[] = [
-    ...weights.map((w) => ({ date: w.measuredAt, icon: '⚖️', label: 'Pesaje', detail: `${Number(w.weightKg)} kg` })),
-    ...health.map((h) => ({ date: h.appliedAt, icon: '💉', label: healthEventLabel[h.eventType], detail: h.medication ?? '' })),
-    ...movements.map((m) => ({ date: m.movedAt, icon: '🔀', label: 'Movimiento', detail: `${locName(m.fromLocationId)} → ${locName(m.toLocationId)}` })),
+    ...weights.map((w) => ({ date: w.measuredAt, icon: '', label: 'Pesaje', detail: `${Number(w.weightKg)} kg` })),
+    ...health.map((h) => ({ date: h.appliedAt, icon: '', label: healthEventLabel[h.eventType], detail: h.medication ?? '' })),
+    ...movements.map((m) => ({ date: m.movedAt, icon: '', label: 'Movimiento', detail: `${locName(m.fromLocationId)} → ${locName(m.toLocationId)}` })),
     ...events.map((ev) => {
       const meta = EVENT_META[ev.type];
       const extra = eventExtra(ev).replace(/^ · /, '');
       const detail = [extra, ev.note ?? ''].filter(Boolean).join(' · ');
       return { date: ev.date, icon: meta.icon, label: meta.label, detail };
     }),
-    ...reproChecks.map((c) => ({ date: c.date, icon: c.type === 'ECOGRAFIA' ? '📡' : '✋', label: c.type === 'ECOGRAFIA' ? 'Ecografía' : 'Tacto', detail: c.result === 'PRENADA' ? 'Preñada' : 'Vacía' })),
+    ...reproChecks.map((c) => ({ date: c.date, icon: c.type === 'ECOGRAFIA' ? '' : '', label: c.type === 'ECOGRAFIA' ? 'Ecografía' : 'Tacto', detail: c.result === 'PRENADA' ? 'Preñada' : 'Vacía' })),
     ...reproEvents.map((e) => {
       const meta = repoEvMeta[e.type];
       const detail = e.type === 'SERVICIO' ? (e.sireTagId ? `Toro ${e.sireTagId}` : '') : e.type === 'PARICION' ? (e.offspringTagId ? `Cría ${e.offspringTagId}` : '') : '';
       return { date: e.date, icon: meta.icon, label: meta.label, detail };
     }),
-    { date: animal.birthDate, icon: '🐣', label: 'Nacimiento', detail: `Caravana ${animal.tagId}` },
+    { date: animal.birthDate, icon: '', label: 'Nacimiento', detail: `Caravana ${animal.tagId}` },
   ].sort((a, b) => b.date.localeCompare(a.date));
 
   return (

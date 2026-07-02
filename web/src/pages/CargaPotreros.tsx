@@ -72,13 +72,13 @@ export default function CargaPotreros() {
 
               {ha === null && (
                 <div className="alert-warning" style={{ marginTop: 12, marginBottom: 0 }}>
-                  ⚠️ Este potrero no tiene hectáreas cargadas: no se puede calcular la carga.
+                  Este potrero no tiene hectáreas cargadas: no se puede calcular la carga.
                   Editalo en Potreros para agregar la superficie.
                 </div>
               )}
               {overloaded && (
                 <div className="alert-warning" style={{ marginTop: 12, marginBottom: 0 }}>
-                  ⚠️ Carga alta ({carga} EV/Ha): revisá el riesgo de sobrepastoreo.
+                  Carga alta ({carga} EV/Ha): revisá el riesgo de sobrepastoreo.
                 </div>
               )}
             </div>

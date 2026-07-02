@@ -133,7 +133,7 @@ export default function LocationEdit() {
         {error && <div className="error">{error}</div>}
 
         <button className="btn" disabled={saving} onClick={() => void save()}>
-          💾 {saving ? 'Guardando…' : 'Guardar cambios'}
+          {saving ? 'Guardando…' : 'Guardar cambios'}
         </button>
 
         {!confirmDelete ? (
@@ -143,7 +143,7 @@ export default function LocationEdit() {
             disabled={occupancy > 0}
             onClick={() => setConfirmDelete(true)}
           >
-            {occupancy > 0 ? 'No se puede eliminar (tiene animales)' : '🗑️ Eliminar potrero'}
+            {occupancy > 0 ? 'No se puede eliminar (tiene animales)' : 'Eliminar potrero'}
           </button>
         ) : (
           <div className="row2">
@@ -235,7 +235,7 @@ function QuickAddAnimal({ locationId }: { locationId: string }) {
         currentLocationId: locationId,
       });
       // Deja el form abierto para cargar el siguiente rápido.
-      setMsg(`✅ ${tag} agregado a este potrero`);
+      setMsg(`${tag} agregado a este potrero`);
       setTagId('');
       setBreed('');
       setWeight('');
@@ -247,7 +247,7 @@ function QuickAddAnimal({ locationId }: { locationId: string }) {
   if (!open) {
     return (
       <button className="btn btn-outline" onClick={() => setOpen(true)}>
-        ➕ Agregar animal a este potrero
+        Agregar animal a este potrero
       </button>
     );
   }
@@ -315,7 +315,7 @@ function QuickAddAnimal({ locationId }: { locationId: string }) {
           Cerrar
         </button>
         <button className="btn" disabled={saving} onClick={() => void add()}>
-          ➕ {saving ? 'Guardando…' : 'Agregar'}
+          {saving ? 'Guardando…' : 'Agregar'}
         </button>
       </div>
     </div>
@@ -360,7 +360,7 @@ function BulkPanel({
     setBusy(true);
     try {
       const n = await bulkMoveByLocation(locationId, dest, 'REGROUPING');
-      setMsg(`✅ ${n} animal(es) movido(s). Se está sincronizando…`);
+      setMsg(`${n} animal(es) movido(s). Se está sincronizando…`);
       setDest('');
     } finally {
       setBusy(false);
@@ -378,7 +378,7 @@ function BulkPanel({
         medication: medication.trim() || undefined,
         withdrawalDays: Number(withdrawalDays) || 0,
       });
-      setMsg(`✅ Evento aplicado a ${n} animal(es). Se está sincronizando…`);
+      setMsg(`Evento aplicado a ${n} animal(es). Se está sincronizando…`);
       setMedication('');
       setWithdrawalDays('0');
     } finally {
@@ -402,7 +402,7 @@ function BulkPanel({
           ))}
         </select>
         <button className="btn" style={{ marginTop: 0 }} disabled={busy || !dest} onClick={() => void moveAll()}>
-          🚚 Mover los {residents.length}
+          Mover los {residents.length}
         </button>
       </div>
 

@@ -68,7 +68,7 @@ export default function AnimalsList() {
                   {a._dirty ? <span className="badge dirty">sin sincronizar</span> : null}
                 </div>
                 <div className="sub">
-                  {speciesLabel[a.species]} · {a.breed} · 📍 {locName(a.currentLocationId)}
+                  {speciesLabel[a.species]} · {a.breed} · {locName(a.currentLocationId)}
                 </div>
               </div>
               <span className="badge">{statusLabel[a.status]}</span>
@@ -77,7 +77,7 @@ export default function AnimalsList() {
       )}
 
       <Link className="fab" to="/animals/new" aria-label="Registrar animal">
-        ➕ <span>Nuevo animal</span>
+        <span>Nuevo animal</span>
       </Link>
     </div>
   );

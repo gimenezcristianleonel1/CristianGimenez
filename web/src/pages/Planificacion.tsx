@@ -67,7 +67,7 @@ export default function Planificacion() {
 
       {urgentCount > 0 && (
         <div className="alert-warning">
-          ⚠️ Tenés <strong>{urgentCount}</strong> tarea(s) pendientes para los próximos días o
+          Tenés <strong>{urgentCount}</strong> tarea(s) pendientes para los próximos días o
           vencidas.
         </div>
       )}
@@ -81,13 +81,13 @@ export default function Planificacion() {
         <input type="datetime-local" value={due} onChange={(e) => setDue(e.target.value)} />
         {error && <div className="error">{error}</div>}
         <button className="btn" disabled={saving}>
-          ➕ {saving ? 'Guardando…' : 'Agregar tarea'}
+          {saving ? 'Guardando…' : 'Agregar tarea'}
         </button>
       </form>
 
       {/* Pendientes */}
       {pending.length === 0 ? (
-        <div className="empty">No hay tareas pendientes. ¡Todo al día! 🎉</div>
+        <div className="empty">No hay tareas pendientes. ¡Todo al día! </div>
       ) : (
         pending.map((t) => (
           <div key={t.id} className={`task ${isOverdue(t) ? 'overdue' : isUrgent(t) ? 'urgent' : ''}`}>
@@ -102,7 +102,7 @@ export default function Planificacion() {
                 {t.title} {t._dirty ? <span className="badge dirty">sin sync</span> : null}
               </div>
               <div className="sub">
-                📅 {fmtDue(t.dueDate)}
+                {fmtDue(t.dueDate)}
                 {isOverdue(t) ? ' · ¡vencida!' : isUrgent(t) ? ' · próxima' : ''}
               </div>
               {t.description ? <div className="sub">{t.description}</div> : null}
@@ -128,7 +128,7 @@ export default function Planificacion() {
                 />
                 <div className="task-body">
                   <div className="task-title struck">{t.title}</div>
-                  <div className="sub">✔️ {fmtDue(t.completedAt)}</div>
+                  <div className="sub">{fmtDue(t.completedAt)}</div>
                 </div>
               </div>
             ))}

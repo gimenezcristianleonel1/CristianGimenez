@@ -43,11 +43,11 @@ export default function Dashboard() {
   const mortalidad = mortBase > 0 ? round1((deceased / mortBase) * 100) : 0;
 
   const catRows: Array<[string, number]> = [
-    ['🐄 Vacas', cat.vacas],
-    ['🐮 Vaquillonas', cat.vaquillonas],
-    ['🍼 Terneros/as', cat.terneros],
-    ['🐂 Novillos', cat.novillos],
-    ['👑 Toros', cat.toros],
+    ['Vacas', cat.vacas],
+    ['Vaquillonas', cat.vaquillonas],
+    ['Terneros/as', cat.terneros],
+    ['Novillos', cat.novillos],
+    ['Toros', cat.toros],
   ];
 
   return (
@@ -63,13 +63,13 @@ export default function Dashboard() {
           <div className="l">Stock (activos)</div>
         </div>
         <Link to="/analisis/indices" className="stat" style={{ textDecoration: 'none' }}>
-          <div className="n" style={{ color: 'var(--olive-dark)' }}>
+          <div className="n" style={{ color: 'var(--brand)' }}>
             {pctPrenez === null ? '—' : `${pctPrenez}%`}
           </div>
           <div className="l">Preñez</div>
         </Link>
         <Link to="/analisis/indices" className="stat" style={{ textDecoration: 'none' }}>
-          <div className="n" style={{ color: 'var(--olive-dark)' }}>
+          <div className="n" style={{ color: 'var(--brand)' }}>
             {pctDestete === null ? '—' : `${pctDestete}%`}
           </div>
           <div className="l">Destete</div>
@@ -113,8 +113,8 @@ export default function Dashboard() {
           Registrá animales, pesajes, eventos y movimientos <strong>sin conexión</strong>. Todo
           sincroniza solo al volver la señal.
         </p>
-        <Link className="btn" to="/animals/new">➕ Registrar animal</Link>
-        <Link className="btn btn-outline" to="/locations/new">📍 Nuevo potrero</Link>
+        <Link className="btn" to="/animals/new">Registrar animal</Link>
+        <Link className="btn btn-outline" to="/locations/new">Nuevo potrero</Link>
       </div>
 
       <div className="grid2">
@@ -132,15 +132,15 @@ export default function Dashboard() {
         <div className="card">
           <h2>Última sincronización</h2>
           <p className="muted" style={{ margin: 0 }}>
-            ✅ {lastResult.pushed} enviado(s) · ⬇️ {lastResult.pulled} actualizado(s)
-            {lastResult.rejected > 0 ? ` · ⚠️ ${lastResult.rejected} rechazado(s)` : ''}
+            {lastResult.pushed} enviado(s) · {lastResult.pulled} actualizado(s)
+            {lastResult.rejected > 0 ? ` · ${lastResult.rejected} rechazado(s)` : ''}
           </p>
         </div>
       )}
 
       {conflicts.length > 0 && (
         <div className="card">
-          <h2>⚠️ Operaciones rechazadas</h2>
+          <h2>Operaciones rechazadas</h2>
           {conflicts.slice(0, 8).map((c) => (
             <div key={c.id} className="sub" style={{ marginBottom: 8 }}>
               <span className="badge danger">{c.kind}</span> {c.message}

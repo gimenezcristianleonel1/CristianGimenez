@@ -66,13 +66,13 @@ export default function Reproductivo() {
               className={`tab ${type === 'TACTO' ? 'active' : ''}`}
               onClick={() => setType('TACTO')}
             >
-              ✋ Tacto
+              Tacto
             </button>
             <button
               className={`tab ${type === 'ECOGRAFIA' ? 'active' : ''}`}
               onClick={() => setType('ECOGRAFIA')}
             >
-              📡 Ecografía
+              Ecografía
             </button>
           </div>
 
@@ -85,7 +85,7 @@ export default function Reproductivo() {
                 <div className="l">Controlados</div>
               </div>
               <div className="stat">
-                <div className="n" style={{ color: 'var(--olive-dark)' }}>
+                <div className="n" style={{ color: 'var(--brand)' }}>
                   {pctPrenez}%
                 </div>
                 <div className="l">Preñez ({prenadas})</div>
@@ -103,7 +103,7 @@ export default function Reproductivo() {
             </div>
             {alerta && (
               <div className="alert-warning" style={{ marginTop: 12, marginBottom: 0 }}>
-                ⚠️ Atención: {pctVacias}% de vacías (supera el {EMPTY_ALERT_THRESHOLD}%). Conviene
+                Atención: {pctVacias}% de vacías (supera el {EMPTY_ALERT_THRESHOLD}%). Conviene
                 revisar estado corporal, sanidad y nutrición del rodeo.
               </div>
             )}
@@ -123,19 +123,19 @@ export default function Reproductivo() {
                   </div>
                   {done ? (
                     <span className={`badge ${done.result === 'VACIA' ? 'danger' : ''}`}>
-                      {done.result === 'PRENADA' ? '🐄 Preñada' : 'Vacía'}
+                      {done.result === 'PRENADA' ? 'Preñada' : 'Vacía'}
                     </span>
                   ) : (
                     <div style={{ display: 'flex', gap: 8 }}>
                       <button className="btn-sm" onClick={() => void register(a.id, 'PRENADA')}>
-                        ✅ Preñada
+                        Preñada
                       </button>
                       <button
                         className="btn-sm"
                         style={{ color: 'var(--danger)' }}
                         onClick={() => void register(a.id, 'VACIA')}
                       >
-                        ⭕ Vacía
+                        Vacía
                       </button>
                     </div>
                   )}

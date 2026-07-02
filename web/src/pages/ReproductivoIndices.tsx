@@ -32,15 +32,15 @@ export default function ReproductivoIndices() {
 
       <div className="grid2">
         <div className="stat">
-          <div className="n" style={{ color: 'var(--olive-dark)' }}>{pctPrenez}%</div>
+          <div className="n" style={{ color: 'var(--brand)' }}>{pctPrenez}%</div>
           <div className="l">Preñez</div>
         </div>
         <div className="stat">
-          <div className="n" style={{ color: 'var(--olive-dark)' }}>{pctParicion}%</div>
+          <div className="n" style={{ color: 'var(--brand)' }}>{pctParicion}%</div>
           <div className="l">Parición</div>
         </div>
         <div className="stat">
-          <div className="n" style={{ color: 'var(--olive-dark)' }}>{pctDestete}%</div>
+          <div className="n" style={{ color: 'var(--brand)' }}>{pctDestete}%</div>
           <div className="l">Destete</div>
         </div>
         <div className="stat">
@@ -61,7 +61,7 @@ export default function ReproductivoIndices() {
 
       {merma > 10 && denom > 0 && (
         <div className="alert-warning">
-          ⚠️ Merma de <strong>{merma}</strong> puntos entre preñez y destete. Revisá pérdidas por
+          Merma de <strong>{merma}</strong> puntos entre preñez y destete. Revisá pérdidas por
           aborto, mortandad neonatal o del ternero.
         </div>
       )}

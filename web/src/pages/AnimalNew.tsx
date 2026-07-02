@@ -155,7 +155,7 @@ export default function AnimalNew() {
       {error && <div className="error">{error}</div>}
 
       <button className="btn" disabled={saving}>
-        💾 {saving ? 'Guardando…' : 'Guardar'}
+        {saving ? 'Guardando…' : 'Guardar'}
       </button>
     </form>
   );

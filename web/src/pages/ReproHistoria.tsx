@@ -11,7 +11,7 @@ const EVENT_LABEL: Record<ReproEventType, string> = {
   PARICION: 'Parición',
   DESTETE: 'Destete',
 };
-const EVENT_ICON: Record<ReproEventType, string> = { SERVICIO: '🐂', PARICION: '🐄', DESTETE: '🍼' };
+const EVENT_ICON: Record<ReproEventType, string> = { SERVICIO: '', PARICION: '', DESTETE: '' };
 
 function fmt(iso: string): string {
   const d = new Date(iso);
@@ -50,7 +50,7 @@ export default function ReproHistoria() {
       .map((c) => ({
         date: c.date,
         kind: c.type,
-        icon: c.type === 'ECOGRAFIA' ? '📡' : '✋',
+        icon: c.type === 'ECOGRAFIA' ? '' : '',
         detail: c.result === 'PRENADA' ? 'Preñada' : 'Vacía',
       }));
     return [...evs, ...chs].sort((a, b) => b.date.localeCompare(a.date));
@@ -126,7 +126,7 @@ export default function ReproHistoria() {
           <div className="section-title">
             <h2 style={{ fontSize: '1.15rem' }}>
               Descendencia ({totals.hijos}
-              {totals.hijos > 0 ? ` · ${totals.machos}♂ ${totals.hembras}♀` : ''})
+              {totals.hijos > 0 ? ` · ${totals.machos}${totals.hembras}` : ''})
             </h2>
           </div>
           {offspring.length === 0 ? (
@@ -139,7 +139,7 @@ export default function ReproHistoria() {
             offspring.map((h) => (
               <Link to={`/animals/${h.id}`} className="list-item" key={h.id}>
                 <div>
-                  <div className="title">🐄 {h.tagId}</div>
+                  <div className="title">{h.tagId}</div>
                   <div className="sub">
                     {sexLabel[h.sex]} · {h.breed} · nac. {fmtDate(h.birthDate)}
                   </div>

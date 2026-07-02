@@ -58,7 +58,7 @@ function Dropzone({
       onDragLeave={() => setOver(false)}
       onDrop={onDrop}
     >
-      <div className="dz-icon">⬆️</div>
+      <div className="dz-icon"></div>
       <div>{label}</div>
       <input
         ref={inputRef}
@@ -163,14 +163,14 @@ export default function Import() {
       {!online && (
         <div className="card" style={{ borderColor: 'var(--warn)' }}>
           <span className="muted">
-            📴 Sin conexión. La importación necesita internet; vas a poder importar cuando vuelva la señal.
+            Sin conexión. La importación necesita internet; vas a poder importar cuando vuelva la señal.
           </span>
         </div>
       )}
 
       {/* ---- Excel ---- */}
       <div className="card">
-        <h2>📄 Importar animales (Excel)</h2>
+        <h2>Importar animales (Excel)</h2>
         <p className="muted" style={{ marginTop: 0 }}>
           Subí un <strong>.xlsx</strong>. Detectamos automáticamente columnas como
           “N° Caravana”, “RP”, “Peso”, etc.
@@ -221,14 +221,14 @@ export default function Import() {
               </div>
             ))}
             <button className="btn" disabled={busy} onClick={() => void confirmMapping()}>
-              ✅ Confirmar y guardar
+              Confirmar y guardar
             </button>
           </div>
         )}
 
         {result && (
           <div className="ok" style={{ marginTop: 12 }}>
-            ✅ Importados: <strong>{result.imported}</strong> · Omitidos (duplicados):{' '}
+            Importados: <strong>{result.imported}</strong> · Omitidos (duplicados):{' '}
             {result.skipped} · Errores: {result.errors.length}
             {result.savedTemplate ? ' · Plantilla guardada' : ''}
             {result.errors.length > 0 && (
@@ -246,7 +246,7 @@ export default function Import() {
 
       {/* ---- Fotos ---- */}
       <div className="card">
-        <h2>📷 Subir fotos</h2>
+        <h2>Subir fotos</h2>
         <p className="muted" style={{ marginTop: 0 }}>
           El nombre del archivo se asocia a la caravana (ej. <code>2044.jpg</code> →
           animal 2044).
@@ -259,7 +259,7 @@ export default function Import() {
         />
         {photos && (
           <div className="ok" style={{ marginTop: 12 }}>
-            ✅ Asociadas: <strong>{photos.matched.length}</strong> · Sin coincidencia:{' '}
+            Asociadas: <strong>{photos.matched.length}</strong> · Sin coincidencia:{' '}
             {photos.unmatched.length}
             {photos.unmatched.length > 0 && (
               <div className="muted" style={{ fontSize: 13 }}>
@@ -272,7 +272,7 @@ export default function Import() {
 
       {/* ---- Export ---- */}
       <div className="card">
-        <h2>⬇️ Exportar animales</h2>
+        <h2>Exportar animales</h2>
         <button className="btn btn-outline" onClick={() => void exportExcel()}>
           Descargar Excel
         </button>
