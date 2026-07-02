@@ -1,17 +1,30 @@
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../db/db';
 import { speciesLabel, statusLabel } from '../lib/labels';
+import { groupOfAnimal, GROUP_LABEL, type CategoryGroup } from '../lib/ev';
 
 export default function AnimalsList() {
   const [q, setQ] = useState('');
   const [loc, setLoc] = useState(''); // '' = todos · 'none' = sin potrero · <id>
+  const [searchParams, setSearchParams] = useSearchParams();
   const animals = useLiveQuery(() => db.animals.toArray(), [], []);
   const locations = useLiveQuery(() => db.locations.toArray(), [], []);
 
+  const rawCat = searchParams.get('cat');
+  const cat = (rawCat && rawCat in GROUP_LABEL ? rawCat : null) as CategoryGroup | null;
+
+  const clearCat = () => {
+    const next = new URLSearchParams(searchParams);
+    next.delete('cat');
+    setSearchParams(next, { replace: true });
+  };
+
   const term = q.trim().toLowerCase();
   const filtered = animals.filter((a) => {
+    // Al filtrar por categoría solo aplican los animales activos (así se ve en el resumen).
+    if (cat && (a.status !== 'ACTIVE' || groupOfAnimal(a) !== cat)) return false;
     if (loc === 'none' && a.currentLocationId) return false;
     if (loc && loc !== 'none' && a.currentLocationId !== loc) return false;
     if (term && !a.tagId.toLowerCase().includes(term) && !a.breed.toLowerCase().includes(term)) {
@@ -26,8 +39,25 @@ export default function AnimalsList() {
   return (
     <div>
       <div className="section-title">
-        <h2>Animales ({filtered.length})</h2>
+        <h2>
+          {cat ? GROUP_LABEL[cat] : 'Animales'} ({filtered.length})
+        </h2>
       </div>
+
+      {cat && (
+        <div
+          className="card"
+          style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px' }}
+        >
+          <span className="sub" style={{ flex: 1 }}>
+            Mostrando la categoría <strong>{GROUP_LABEL[cat]}</strong>. Tocá un animal para ver su
+            historial.
+          </span>
+          <button className="btn-sm" onClick={clearCat}>
+            Ver todos
+          </button>
+        </div>
+      )}
 
       {/* Filtro por potrero */}
       <label>Potrero</label>

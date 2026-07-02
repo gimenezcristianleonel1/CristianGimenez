@@ -42,6 +42,39 @@ export const CATEGORY_LABEL: Record<CowCategory, string> = {
   TORO: 'Toro',
 };
 
+/**
+ * Agrupación de categorías tal como se muestra en el Dashboard ("Stock por
+ * categoría"). Se comparte con la lista de animales para poder filtrar al tocar
+ * una categoría.
+ */
+export type CategoryGroup = 'vacas' | 'vaquillonas' | 'terneros' | 'novillos' | 'toros';
+
+export const GROUP_OF: Record<CowCategory, CategoryGroup> = {
+  VACA_CON_TERNERO: 'vacas',
+  VACA_SECA: 'vacas',
+  VAQUILLONA: 'vaquillonas',
+  TERNERO: 'terneros',
+  NOVILLITO: 'novillos',
+  NOVILLO: 'novillos',
+  TORO: 'toros',
+};
+
+export const GROUP_LABEL: Record<CategoryGroup, string> = {
+  vacas: 'Vacas',
+  vaquillonas: 'Vaquillonas',
+  terneros: 'Terneros/as',
+  novillos: 'Novillos',
+  toros: 'Toros',
+};
+
+/** Grupo (Dashboard) al que pertenece un animal. */
+export function groupOfAnimal(
+  animal: Pick<Animal, 'sex' | 'birthDate' | 'metadata'>,
+  now: Date = new Date(),
+): CategoryGroup {
+  return GROUP_OF[classifyCategory(animal.sex, animal.birthDate, animal.metadata, now)];
+}
+
 const WEANING_MAX_MONTHS = 12;
 const YOUNG_MAX_MONTHS = 24;
 const HEIFER_MAX_MONTHS = 30;

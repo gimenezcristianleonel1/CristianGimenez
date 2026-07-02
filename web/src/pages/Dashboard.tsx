@@ -2,7 +2,8 @@ import { Link } from 'react-router-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../db/db';
 import { useSync } from '../sync/SyncProvider';
-import { classifyCategory } from '../lib/ev';
+import { classifyCategory, type CategoryGroup } from '../lib/ev';
+import { Icon } from '../components/Icon';
 
 const round1 = (n: number): number => Math.round(n * 10) / 10;
 
@@ -42,12 +43,12 @@ export default function Dashboard() {
   const mortBase = active.length + deceased;
   const mortalidad = mortBase > 0 ? round1((deceased / mortBase) * 100) : 0;
 
-  const catRows: Array<[string, number]> = [
-    ['Vacas', cat.vacas],
-    ['Vaquillonas', cat.vaquillonas],
-    ['Terneros/as', cat.terneros],
-    ['Novillos', cat.novillos],
-    ['Toros', cat.toros],
+  const catRows: Array<[string, number, CategoryGroup]> = [
+    ['Vacas', cat.vacas, 'vacas'],
+    ['Vaquillonas', cat.vaquillonas, 'vaquillonas'],
+    ['Terneros/as', cat.terneros, 'terneros'],
+    ['Novillos', cat.novillos, 'novillos'],
+    ['Toros', cat.toros, 'toros'],
   ];
 
   return (
@@ -88,12 +89,36 @@ export default function Dashboard() {
         {active.length === 0 ? (
           <p className="muted" style={{ margin: 0 }}>Todavía no hay animales activos.</p>
         ) : (
-          catRows.map(([label, n]) => (
-            <div className="list-item" key={label} style={{ marginBottom: 8, minHeight: 0, padding: '12px 16px' }}>
-              <div className="title" style={{ fontSize: '1.05rem' }}>{label}</div>
-              <span className="badge">{n}</span>
-            </div>
-          ))
+          <>
+            {catRows.map(([label, n, group]) =>
+              n > 0 ? (
+                <Link
+                  className="list-item"
+                  key={group}
+                  to={`/animals?cat=${group}`}
+                  style={{ marginBottom: 8, minHeight: 0, padding: '12px 16px' }}
+                >
+                  <div className="title" style={{ fontSize: '1.05rem' }}>{label}</div>
+                  <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <span className="badge">{n}</span>
+                    <Icon name="back" size={18} className="flip-x" />
+                  </span>
+                </Link>
+              ) : (
+                <div
+                  className="list-item"
+                  key={group}
+                  style={{ marginBottom: 8, minHeight: 0, padding: '12px 16px', opacity: 0.55 }}
+                >
+                  <div className="title" style={{ fontSize: '1.05rem' }}>{label}</div>
+                  <span className="badge">{n}</span>
+                </div>
+              ),
+            )}
+            <p className="muted" style={{ margin: '4px 2px 0' }}>
+              Tocá una categoría para ver esos animales y su historial.
+            </p>
+          </>
         )}
       </div>
 

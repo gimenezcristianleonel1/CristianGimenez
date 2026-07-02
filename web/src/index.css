@@ -232,6 +232,10 @@ textarea:focus-visible {
 .list-item:active {
   background: #f6f7f4;
 }
+.flip-x {
+  transform: scaleX(-1);
+  color: var(--muted);
+}
 .list-item .title {
   font-weight: 600;
   font-size: 1rem;
