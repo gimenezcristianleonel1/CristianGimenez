@@ -51,12 +51,6 @@ interface ImportOk {
   errors: Array<{ row: number; message: string }>;
   savedTemplate: boolean;
 }
-interface RequiresMapping {
-  status: 'REQUIERE_MAPEO';
-  columns: string[];
-  suggestedMapping: Partial<Record<AppField, string>>;
-  fields: Array<{ field: AppField; label: string; required: boolean }>;
-}
 interface PhotoResult {
   matched: Array<{ filename: string; tagId: string }>;
   unmatched: string[];
@@ -118,19 +112,14 @@ export default function Import() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [result, setResult] = useState<ImportOk | null>(null);
-  const [needMap, setNeedMap] = useState<RequiresMapping | null>(null);
-  const [mapSel, setMapSel] = useState<Partial<Record<AppField, string>>>({});
-  const [pendingFile, setPendingFile] = useState<File | null>(null);
   const [photos, setPhotos] = useState<PhotoResult | null>(null);
   const [destLocation, setDestLocation] = useState('');
   // Revisión previa (foto/Excel) antes de guardar.
   const [review, setReview] = useState<ReviewRow[] | null>(null);
   const [reviewSource, setReviewSource] = useState<'image' | 'excel' | null>(null);
-  const [reviewAfterMap, setReviewAfterMap] = useState(false);
 
   function openReview(res: ExtractResult) {
     setResult(null);
-    setNeedMap(null);
     setReviewSource(res.source);
     setReview(
       res.rows.map((r) => ({
@@ -166,7 +155,7 @@ export default function Import() {
     }
   }
 
-  async function uploadExcelReview(file: File, mapping?: Partial<Record<AppField, string>>) {
+  async function uploadExcelReview(file: File) {
     setBusy(true);
     setError('');
     setResult(null);
@@ -174,21 +163,24 @@ export default function Import() {
     try {
       const fd = new FormData();
       fd.append('file', file);
-      if (mapping) fd.append('mapping', JSON.stringify(mapping));
-      const res = await apiUpload<ExtractResult | RequiresMapping>('/animals/import/preview', fd);
-      if (res.status === 'REQUIERE_MAPEO') {
-        setNeedMap(res);
-        setMapSel(res.suggestedMapping ?? {});
-        setPendingFile(file);
-        setReviewAfterMap(true);
+      const res = await apiUpload<ExtractResult>('/animals/import/preview', fd);
+      if (!res.rows?.length) {
+        setError('No encontré filas en el archivo. Revisá que tenga datos.');
       } else {
         openReview(res);
       }
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'No se pudo leer el Excel');
+      setError(err instanceof ApiError ? err.message : 'No se pudo leer el archivo');
     } finally {
       setBusy(false);
     }
+  }
+
+  /** Único punto de entrada: foto → IA de imagen; Excel/CSV → IA de columnas. Ambos van a revisión. */
+  function smartImport(file: File | undefined) {
+    if (!file) return;
+    if (file.type.startsWith('image/')) void uploadImage(file);
+    else void uploadExcelReview(file);
   }
 
   function editRow(i: number, field: keyof ReviewRow, value: string) {
@@ -244,71 +236,6 @@ export default function Import() {
     }
   }
 
-  async function uploadExcel(file: File, mapping?: Partial<Record<AppField, string>>) {
-    setBusy(true);
-    setError('');
-    setResult(null);
-    if (!mapping) {
-      setNeedMap(null);
-      setPhotos(null);
-    }
-    try {
-      const fd = new FormData();
-      fd.append('file', file);
-      if (mapping) fd.append('mapping', JSON.stringify(mapping));
-      if (destLocation) fd.append('locationId', destLocation);
-      const res = await apiUpload<ImportOk | RequiresMapping>('/animals/import', fd);
-      if (res.status === 'REQUIERE_MAPEO') {
-        setNeedMap(res);
-        setMapSel(res.suggestedMapping ?? {});
-        setPendingFile(file);
-        setReviewAfterMap(false);
-      } else {
-        setResult(res);
-        setNeedMap(null);
-        setPendingFile(null);
-        void sync(); // refrescar datos locales con lo importado
-      }
-    } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'No se pudo importar el archivo');
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  async function analyzeFile(file: File) {
-    setBusy(true);
-    setError('');
-    setResult(null);
-    setReview(null);
-    try {
-      const fd = new FormData();
-      fd.append('file', file);
-      const res = await apiUpload<RequiresMapping>('/animals/import/analyze', fd);
-      setNeedMap(res);
-      setMapSel(res.suggestedMapping ?? {});
-      setPendingFile(file);
-      setReviewAfterMap(false); // al confirmar el mapeo se importa directo
-    } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'No se pudo analizar el archivo');
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  async function confirmMapping() {
-    if (!pendingFile) return;
-    if (!mapSel.tagId) {
-      setError('Asigná al menos la columna de la Caravana');
-      return;
-    }
-    const clean = Object.fromEntries(Object.entries(mapSel).filter(([, v]) => v)) as Partial<
-      Record<AppField, string>
-    >;
-    if (reviewAfterMap) await uploadExcelReview(pendingFile, clean);
-    else await uploadExcel(pendingFile, clean);
-  }
-
   async function uploadPhotos(files: File[]) {
     setBusy(true);
     setError('');
@@ -347,14 +274,13 @@ export default function Import() {
         </div>
       )}
 
-      {/* ---- Importar con revisión (foto IA o Excel) ---- */}
+      {/* ---- Importar: una sola entrada (foto o Excel/CSV), siempre IA + revisión ---- */}
       {!review && (
         <div className="card">
-          <h2>Importar y revisar (foto o Excel)</h2>
+          <h2>Importar animales</h2>
           <p className="muted" style={{ marginTop: 0 }}>
-            Subí una <strong>foto</strong> de una planilla/cuaderno o un{' '}
-            <strong>Excel</strong>. Detectamos los datos y te dejamos{' '}
-            <strong>revisarlos y corregirlos</strong> antes de guardarlos.
+            Subí una <strong>foto</strong> de una planilla o un <strong>Excel/CSV</strong>. La IA lee
+            los datos y te deja <strong>revisarlos y corregirlos</strong> antes de guardar.
           </p>
           <label>Asignar a potrero (opcional)</label>
           <select value={destLocation} onChange={(e) => setDestLocation(e.target.value)}>
@@ -367,17 +293,26 @@ export default function Import() {
           </select>
           <div style={{ height: 10 }} />
           <Dropzone
-            label="Foto de una planilla (JPG/PNG) — la lee la IA"
-            accept="image/*"
-            onFiles={(files) => void uploadImage(files[0])}
+            label="Agregar foto o Excel"
+            accept="image/*,.xlsx,.csv"
+            onFiles={(files) => smartImport(files[0])}
           />
-          <div style={{ height: 8 }} />
-          <Dropzone
-            label="Excel para revisar antes de guardar"
-            accept=".xlsx"
-            onFiles={(files) => void uploadExcelReview(files[0])}
-          />
-          {busy && <p className="muted">Procesando…</p>}
+          {busy && <p className="muted">Procesando… la IA está leyendo el archivo.</p>}
+          {result && (
+            <div className="ok" style={{ marginTop: 12 }}>
+              Importados: <strong>{result.imported}</strong> · Omitidos (duplicados): {result.skipped}{' '}
+              · Errores: {result.errors.length}
+              {result.errors.length > 0 && (
+                <ul className="muted" style={{ fontSize: 13 }}>
+                  {result.errors.slice(0, 5).map((e, i) => (
+                    <li key={i}>
+                      Fila {e.row}: {e.message}
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          )}
         </div>
       )}
 
@@ -487,91 +422,15 @@ export default function Import() {
         </div>
       )}
 
-      {/* ---- Excel / CSV con mapeo inteligente (IA) ---- */}
+      {/* ---- Fotos de los animales (utilidad aparte: asocia por caravana) ---- */}
       <div className="card">
-        <h2>Importar animales (Excel o CSV)</h2>
+        <h2>Fotos de los animales (opcional)</h2>
         <p className="muted" style={{ marginTop: 0 }}>
-          Subí un <strong>.xlsx</strong> o <strong>.csv</strong>. La IA sugiere qué columna es
-          cada dato (caravana, peso, nacimiento…) y lo <strong>confirmás</strong> antes de importar.
-        </p>
-
-        <label>Asignar a potrero (opcional)</label>
-        <select value={destLocation} onChange={(e) => setDestLocation(e.target.value)}>
-          <option value="">— Sin asignar —</option>
-          {locations.map((l) => (
-            <option key={l.id} value={l.id}>
-              {l.name}
-            </option>
-          ))}
-        </select>
-        <div style={{ height: 10 }} />
-
-        <Dropzone
-          label="Arrastrá el Excel o CSV acá o tocá para elegir"
-          accept=".xlsx,.csv"
-          onFiles={(files) => void analyzeFile(files[0])}
-        />
-
-        {busy && <p className="muted">Procesando…</p>}
-
-        {needMap && (
-          <div style={{ marginTop: 12 }}>
-            <h2 style={{ fontSize: 15 }}>Confirmá el mapeo de columnas</h2>
-            <p className="muted" style={{ marginTop: 0 }}>
-              La IA ya sugirió las asignaciones. Revisá y corregí lo que haga falta; guardamos
-              esta configuración para la próxima.
-            </p>
-            {needMap.fields.map((f) => (
-              <div key={f.field}>
-                <label>
-                  {f.label} {f.required ? '*' : ''}
-                </label>
-                <select
-                  value={mapSel[f.field] ?? ''}
-                  onChange={(e) => setMapSel((m) => ({ ...m, [f.field]: e.target.value }))}
-                >
-                  <option value="">— (ninguna)</option>
-                  {needMap.columns.map((c) => (
-                    <option key={c} value={c}>
-                      {c}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            ))}
-            <button className="btn" disabled={busy} onClick={() => void confirmMapping()}>
-              Confirmar y guardar
-            </button>
-          </div>
-        )}
-
-        {result && (
-          <div className="ok" style={{ marginTop: 12 }}>
-            Importados: <strong>{result.imported}</strong> · Omitidos (duplicados):{' '}
-            {result.skipped} · Errores: {result.errors.length}
-            {result.savedTemplate ? ' · Plantilla guardada' : ''}
-            {result.errors.length > 0 && (
-              <ul className="muted" style={{ fontSize: 13 }}>
-                {result.errors.slice(0, 5).map((e, i) => (
-                  <li key={i}>
-                    Fila {e.row}: {e.message}
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
-        )}
-      </div>
-
-      {/* ---- Fotos ---- */}
-      <div className="card">
-        <h2>Subir fotos</h2>
-        <p className="muted" style={{ marginTop: 0 }}>
-          El nombre del archivo se asocia a la caravana (ej. <code>2044.jpg</code> →
-          animal 2044).
+          Distinto a importar datos: acá subís la <strong>foto de cada animal</strong>. El nombre del
+          archivo se asocia a la caravana (ej. <code>2044.jpg</code> → animal 2044).
         </p>
         <Dropzone
-          label="Arrastrá las imágenes acá o tocá para elegir"
+          label="Arrastrá las fotos de los animales acá o tocá para elegir"
           accept="image/*"
           multiple
           onFiles={(files) => void uploadPhotos(files)}

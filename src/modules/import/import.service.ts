@@ -237,22 +237,29 @@ export class ImportService {
     if (headers.length === 0) {
       throw new BadRequestException('El archivo no tiene encabezados válidos');
     }
+    const suggested = await this.resolveMapping(establishmentId, headers);
+    return this.buildRequiresMapping(headers, suggested, rows);
+  }
 
-    // Base: matcher local por sinónimos. Se completa/prioriza con la sugerencia de IA.
+  /**
+   * Resuelve el mapeo columna→campo: matcher local por sinónimos, priorizado
+   * por la sugerencia de Gemini (si hay API key) y por la plantilla aprendida.
+   */
+  private async resolveMapping(
+    establishmentId: string,
+    headers: string[],
+  ): Promise<Partial<Record<AppField, string>>> {
     const local = matchHeaders(headers).mapping;
     let suggested: Partial<Record<AppField, string>> = { ...local };
     if (this.aiMapping.enabled) {
       const ai = await this.aiMapping.suggestMapping(headers);
       suggested = { ...local, ...ai }; // la IA pisa al matcher local cuando propone algo
     }
-
-    // Si ya hay una plantilla aprendida para esta estructura, tiene prioridad.
     const template = await this.templates.findBySignature(establishmentId, signatureOf(headers));
     if (template) {
       suggested = { ...suggested, ...(template.mapping as Partial<Record<AppField, string>>) };
     }
-
-    return this.buildRequiresMapping(headers, suggested, rows);
+    return suggested;
   }
 
   // ----------------------------------------- Importar con revisión (IA / Excel)
@@ -271,32 +278,22 @@ export class ImportService {
   }
 
   /**
-   * Parsea un Excel y devuelve filas para revisar (NO guarda). Si no puede
-   * identificar la caravana, pide el mapeo de columnas como en la importación.
+   * Parsea un Excel/CSV, mapea las columnas con IA (con fallback local) y
+   * devuelve las filas normalizadas para revisar/editar antes de guardar.
+   * Siempre devuelve filas (aunque falte algún campo, se marca como "issue").
    */
   async extractFromExcel(
     establishmentId: string,
     buffer: Buffer,
+    isCsv = false,
     providedMapping?: Partial<Record<AppField, string>>,
-  ): Promise<ExtractResult | RequiresMappingResult> {
-    const { headers, rows } = await this.parseWorkbook(buffer);
+  ): Promise<ExtractResult> {
+    const { headers, rows } = await this.parseWorkbook(buffer, isCsv);
     if (headers.length === 0) {
       throw new BadRequestException('El archivo no tiene encabezados válidos');
     }
-    const signature = signatureOf(headers);
-
-    let mapping = providedMapping;
-    if (!mapping) {
-      const template = await this.templates.findBySignature(establishmentId, signature);
-      if (template) mapping = template.mapping as Partial<Record<AppField, string>>;
-    }
-    if (!mapping) mapping = matchHeaders(headers).mapping;
-
-    if (!hasRequiredFields(mapping)) {
-      return this.buildRequiresMapping(headers, matchHeaders(headers).mapping, rows);
-    }
-
-    const extracted = rows.map((row) => this.rowToExtracted(row, mapping!));
+    const mapping = providedMapping ?? (await this.resolveMapping(establishmentId, headers));
+    const extracted = rows.map((row) => this.rowToExtracted(row, mapping));
     return { status: 'REVISAR', source: 'excel', rows: extracted };
   }
 

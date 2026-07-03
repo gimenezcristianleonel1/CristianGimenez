@@ -107,7 +107,7 @@ export class ImportController {
   @Post('import/preview')
   @ApiConsumes('multipart/form-data')
   @ApiOperation({
-    summary: 'Parsear un Excel y devolver las filas para revisar/editar antes de guardar',
+    summary: 'Parsear un Excel/CSV (mapeo con IA) y devolver filas para revisar antes de guardar',
   })
   @UseInterceptors(FileInterceptor('file', { limits: { fileSize: EXCEL_LIMIT } }))
   previewExcel(
@@ -116,10 +116,10 @@ export class ImportController {
     @Body() dto: ImportExcelDto,
   ) {
     if (!file) {
-      throw new BadRequestException('Adjuntá un archivo Excel en el campo "file"');
+      throw new BadRequestException('Adjuntá un archivo (Excel o CSV) en el campo "file"');
     }
     const mapping = this.parseMapping(dto.mapping);
-    return this.importService.extractFromExcel(est, file.buffer, mapping);
+    return this.importService.extractFromExcel(est, file.buffer, isCsvFile(file), mapping);
   }
 
   @Post('import/rows')
