@@ -43,11 +43,34 @@ export class ImportController {
     @Body() dto: ImportExcelDto,
   ) {
     if (!file) {
-      throw new BadRequestException('Adjuntá un archivo Excel en el campo "file"');
+      throw new BadRequestException('Adjuntá un archivo (Excel o CSV) en el campo "file"');
     }
     const mapping = this.parseMapping(dto.mapping);
     const saveTemplate = dto.saveTemplate !== 'false';
-    return this.importService.importExcel(est, file.buffer, mapping, saveTemplate, dto.locationId);
+    return this.importService.importExcel(
+      est,
+      file.buffer,
+      mapping,
+      saveTemplate,
+      dto.locationId,
+      isCsvFile(file),
+    );
+  }
+
+  @Post('import/analyze')
+  @ApiConsumes('multipart/form-data')
+  @ApiOperation({
+    summary: 'Leer encabezados de un Excel/CSV y sugerir el mapeo de columnas con IA (Gemini)',
+  })
+  @UseInterceptors(FileInterceptor('file', { limits: { fileSize: EXCEL_LIMIT } }))
+  analyze(
+    @CurrentUser('establishmentId') est: string,
+    @UploadedFile() file: Express.Multer.File | undefined,
+  ) {
+    if (!file) {
+      throw new BadRequestException('Adjuntá un archivo (Excel o CSV) en el campo "file"');
+    }
+    return this.importService.analyzeHeaders(est, file.buffer, isCsvFile(file));
   }
 
   @Post('import/photos')
@@ -144,4 +167,9 @@ export class ImportController {
       throw new BadRequestException('El campo "mapping" no es un JSON válido');
     }
   }
+}
+
+/** ¿El archivo es CSV? (por extensión o content-type). */
+function isCsvFile(file: Express.Multer.File): boolean {
+  return /\.csv$/i.test(file.originalname ?? '') || (file.mimetype ?? '').includes('csv');
 }

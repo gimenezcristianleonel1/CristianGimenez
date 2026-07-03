@@ -1,5 +1,6 @@
 import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma, Sex, Species } from '@prisma/client';
+import { Readable } from 'stream';
 import * as ExcelJS from 'exceljs';
 import { CreateAnimalDto } from '@modules/animals/dto/create-animal.dto';
 import { PrismaService } from '@infrastructure/database/prisma.service';
@@ -7,6 +8,7 @@ import { AnimalsService } from '@modules/animals/animals.service';
 import { AnimalsRepository } from '@modules/animals/animals.repository';
 import { ImportTemplatesRepository } from './import-templates.repository';
 import { GeminiVisionService, VisionRow } from './gemini-vision.service';
+import { GeminiMappingService } from './gemini-mapping.service';
 import {
   APP_FIELDS,
   AppField,
@@ -79,6 +81,7 @@ export class ImportService {
     private readonly animalsRepo: AnimalsRepository,
     private readonly templates: ImportTemplatesRepository,
     private readonly vision: GeminiVisionService,
+    private readonly aiMapping: GeminiMappingService,
   ) {}
 
   // ---------------------------------------------------------------- Excel
@@ -89,6 +92,7 @@ export class ImportService {
     providedMapping?: Partial<Record<AppField, string>>,
     saveTemplate = true,
     locationId?: string,
+    isCsv = false,
   ): Promise<ImportResult | RequiresMappingResult> {
     // Si se pide asignar a un potrero, validamos una sola vez que sea del establecimiento.
     if (locationId) {
@@ -98,7 +102,7 @@ export class ImportService {
       }
     }
 
-    const { headers, rows } = await this.parseWorkbook(buffer);
+    const { headers, rows } = await this.parseWorkbook(buffer, isCsv);
     if (headers.length === 0) {
       throw new BadRequestException('El archivo no tiene encabezados válidos');
     }
@@ -215,6 +219,40 @@ export class ImportService {
       })),
       sampleRows: rows.slice(0, 3),
     };
+  }
+
+  // ------------------------------------------- Pre-mapeo con IA (Excel / CSV)
+
+  /**
+   * Lee los encabezados de un Excel/CSV y sugiere el mapeo de columnas usando
+   * Gemini (con fallback al matcher local por sinónimos). Devuelve el formulario
+   * de mapeo con las sugerencias ya seleccionadas para que el usuario confirme.
+   */
+  async analyzeHeaders(
+    establishmentId: string,
+    buffer: Buffer,
+    isCsv = false,
+  ): Promise<RequiresMappingResult> {
+    const { headers, rows } = await this.parseWorkbook(buffer, isCsv);
+    if (headers.length === 0) {
+      throw new BadRequestException('El archivo no tiene encabezados válidos');
+    }
+
+    // Base: matcher local por sinónimos. Se completa/prioriza con la sugerencia de IA.
+    const local = matchHeaders(headers).mapping;
+    let suggested: Partial<Record<AppField, string>> = { ...local };
+    if (this.aiMapping.enabled) {
+      const ai = await this.aiMapping.suggestMapping(headers);
+      suggested = { ...local, ...ai }; // la IA pisa al matcher local cuando propone algo
+    }
+
+    // Si ya hay una plantilla aprendida para esta estructura, tiene prioridad.
+    const template = await this.templates.findBySignature(establishmentId, signatureOf(headers));
+    if (template) {
+      suggested = { ...suggested, ...(template.mapping as Partial<Record<AppField, string>>) };
+    }
+
+    return this.buildRequiresMapping(headers, suggested, rows);
   }
 
   // ----------------------------------------- Importar con revisión (IA / Excel)
@@ -384,16 +422,24 @@ export class ImportService {
 
   private async parseWorkbook(
     buffer: Buffer,
+    isCsv = false,
   ): Promise<{ headers: string[]; rows: Array<Record<string, unknown>> }> {
     const workbook = new ExcelJS.Workbook();
     try {
-      // Cast por diferencias de tipos entre @types/node (Buffer) y exceljs.
-      await workbook.xlsx.load(buffer as unknown as ExcelJS.Buffer);
+      if (isCsv) {
+        const stream = Readable.from(buffer.toString('utf8'));
+        await workbook.csv.read(stream);
+      } else {
+        // Cast por diferencias de tipos entre @types/node (Buffer) y exceljs.
+        await workbook.xlsx.load(buffer as unknown as ExcelJS.Buffer);
+      }
     } catch {
-      throw new BadRequestException('No se pudo leer el archivo Excel (.xlsx)');
+      throw new BadRequestException(
+        isCsv ? 'No se pudo leer el CSV' : 'No se pudo leer el archivo Excel (.xlsx)',
+      );
     }
     const sheet = workbook.worksheets[0];
-    if (!sheet) throw new BadRequestException('El archivo no tiene hojas');
+    if (!sheet) throw new BadRequestException('El archivo está vacío o no tiene datos');
 
     const headers: string[] = [];
     sheet.getRow(1).eachCell((cell, col) => {

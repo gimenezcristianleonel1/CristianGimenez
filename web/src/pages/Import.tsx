@@ -276,6 +276,26 @@ export default function Import() {
     }
   }
 
+  async function analyzeFile(file: File) {
+    setBusy(true);
+    setError('');
+    setResult(null);
+    setReview(null);
+    try {
+      const fd = new FormData();
+      fd.append('file', file);
+      const res = await apiUpload<RequiresMapping>('/animals/import/analyze', fd);
+      setNeedMap(res);
+      setMapSel(res.suggestedMapping ?? {});
+      setPendingFile(file);
+      setReviewAfterMap(false); // al confirmar el mapeo se importa directo
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'No se pudo analizar el archivo');
+    } finally {
+      setBusy(false);
+    }
+  }
+
   async function confirmMapping() {
     if (!pendingFile) return;
     if (!mapSel.tagId) {
@@ -467,12 +487,12 @@ export default function Import() {
         </div>
       )}
 
-      {/* ---- Excel ---- */}
+      {/* ---- Excel / CSV con mapeo inteligente (IA) ---- */}
       <div className="card">
-        <h2>Importar animales (Excel)</h2>
+        <h2>Importar animales (Excel o CSV)</h2>
         <p className="muted" style={{ marginTop: 0 }}>
-          Subí un <strong>.xlsx</strong>. Detectamos automáticamente columnas como
-          “N° Caravana”, “RP”, “Peso”, etc.
+          Subí un <strong>.xlsx</strong> o <strong>.csv</strong>. La IA sugiere qué columna es
+          cada dato (caravana, peso, nacimiento…) y lo <strong>confirmás</strong> antes de importar.
         </p>
 
         <label>Asignar a potrero (opcional)</label>
@@ -487,19 +507,19 @@ export default function Import() {
         <div style={{ height: 10 }} />
 
         <Dropzone
-          label="Arrastrá el Excel acá o tocá para elegir"
-          accept=".xlsx"
-          onFiles={(files) => void uploadExcel(files[0])}
+          label="Arrastrá el Excel o CSV acá o tocá para elegir"
+          accept=".xlsx,.csv"
+          onFiles={(files) => void analyzeFile(files[0])}
         />
 
         {busy && <p className="muted">Procesando…</p>}
 
         {needMap && (
           <div style={{ marginTop: 12 }}>
-            <h2 style={{ fontSize: 15 }}>Emparejá las columnas</h2>
+            <h2 style={{ fontSize: 15 }}>Confirmá el mapeo de columnas</h2>
             <p className="muted" style={{ marginTop: 0 }}>
-              No reconocimos algunos encabezados. Asocialos y guardamos esta configuración para
-              la próxima.
+              La IA ya sugirió las asignaciones. Revisá y corregí lo que haga falta; guardamos
+              esta configuración para la próxima.
             </p>
             {needMap.fields.map((f) => (
               <div key={f.field}>
