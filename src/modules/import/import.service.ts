@@ -6,6 +6,7 @@ import { PrismaService } from '@infrastructure/database/prisma.service';
 import { AnimalsService } from '@modules/animals/animals.service';
 import { AnimalsRepository } from '@modules/animals/animals.repository';
 import { ImportTemplatesRepository } from './import-templates.repository';
+import { GeminiVisionService, VisionRow } from './gemini-vision.service';
 import {
   APP_FIELDS,
   AppField,
@@ -42,6 +43,34 @@ export interface PhotoImportResult {
   unmatched: string[];
 }
 
+/** Fila ya normalizada a nuestro esquema, para revisar/editar antes de guardar. */
+export interface ExtractedRow {
+  tagId: string;
+  species: Species;
+  breed: string;
+  sex: Sex;
+  birthDate: string; // yyyy-mm-dd ('' si no se detectó)
+  initialWeightKg: number | null;
+  /** Campos que la IA/planilla no supo con certeza (para resaltar en la tabla). */
+  issues: AppField[];
+}
+
+export interface ExtractResult {
+  status: 'REVISAR';
+  source: 'image' | 'excel';
+  rows: ExtractedRow[];
+}
+
+/** Fila tal como la envía el frontend tras editar (todo texto, laxo). */
+export interface ImportRowInput {
+  tagId?: string;
+  species?: string;
+  breed?: string;
+  sex?: string;
+  birthDate?: string;
+  initialWeightKg?: string | number | null;
+}
+
 @Injectable()
 export class ImportService {
   constructor(
@@ -49,6 +78,7 @@ export class ImportService {
     private readonly animalsService: AnimalsService,
     private readonly animalsRepo: AnimalsRepository,
     private readonly templates: ImportTemplatesRepository,
+    private readonly vision: GeminiVisionService,
   ) {}
 
   // ---------------------------------------------------------------- Excel
@@ -184,6 +214,171 @@ export class ImportService {
         required: field === 'tagId',
       })),
       sampleRows: rows.slice(0, 3),
+    };
+  }
+
+  // ----------------------------------------- Importar con revisión (IA / Excel)
+
+  /** Lee una imagen (JPG/PNG) con IA y devuelve filas para revisar (NO guarda). */
+  async extractFromImage(file: Express.Multer.File): Promise<ExtractResult> {
+    if (!this.vision.enabled) {
+      throw new BadRequestException(
+        'La lectura por foto no está configurada (falta la API key de Gemini).',
+      );
+    }
+    const base64 = file.buffer.toString('base64');
+    const raw = await this.vision.extractRows(base64, file.mimetype || 'image/jpeg');
+    const rows = raw.map((r) => this.normalizeExtractedRow(r)).filter((r) => this.rowHasData(r));
+    return { status: 'REVISAR', source: 'image', rows };
+  }
+
+  /**
+   * Parsea un Excel y devuelve filas para revisar (NO guarda). Si no puede
+   * identificar la caravana, pide el mapeo de columnas como en la importación.
+   */
+  async extractFromExcel(
+    establishmentId: string,
+    buffer: Buffer,
+    providedMapping?: Partial<Record<AppField, string>>,
+  ): Promise<ExtractResult | RequiresMappingResult> {
+    const { headers, rows } = await this.parseWorkbook(buffer);
+    if (headers.length === 0) {
+      throw new BadRequestException('El archivo no tiene encabezados válidos');
+    }
+    const signature = signatureOf(headers);
+
+    let mapping = providedMapping;
+    if (!mapping) {
+      const template = await this.templates.findBySignature(establishmentId, signature);
+      if (template) mapping = template.mapping as Partial<Record<AppField, string>>;
+    }
+    if (!mapping) mapping = matchHeaders(headers).mapping;
+
+    if (!hasRequiredFields(mapping)) {
+      return this.buildRequiresMapping(headers, matchHeaders(headers).mapping, rows);
+    }
+
+    const extracted = rows.map((row) => this.rowToExtracted(row, mapping!));
+    return { status: 'REVISAR', source: 'excel', rows: extracted };
+  }
+
+  /** Guarda las filas ya revisadas/editadas por el usuario. */
+  async saveRows(
+    establishmentId: string,
+    rows: ImportRowInput[],
+    locationId?: string,
+  ): Promise<ImportResult> {
+    if (locationId) {
+      const location = await this.animalsRepo.findLocationById(locationId);
+      if (!location || location.establishmentId !== establishmentId) {
+        throw new BadRequestException('El potrero indicado no existe en tu establecimiento');
+      }
+    }
+
+    const result: ImportResult = {
+      status: 'OK',
+      total: rows.length,
+      imported: 0,
+      skipped: 0,
+      errors: [],
+      mappingUsed: {},
+      savedTemplate: false,
+    };
+
+    let n = 0;
+    for (const row of rows) {
+      n++;
+      const dto = this.extractedToDto(row, locationId);
+      if (!dto) {
+        result.errors.push({ row: n, message: 'Falta la caravana' });
+        continue;
+      }
+      try {
+        await this.animalsService.create(establishmentId, dto);
+        result.imported++;
+      } catch (err) {
+        if (err instanceof ConflictException) {
+          result.skipped++;
+        } else {
+          result.errors.push({
+            row: n,
+            message: err instanceof Error ? err.message : 'Error desconocido',
+          });
+        }
+      }
+    }
+    return result;
+  }
+
+  /** Normaliza una fila cruda (de la IA) al esquema y marca lo incierto. */
+  private normalizeExtractedRow(v: VisionRow): ExtractedRow {
+    const issues: AppField[] = [];
+    const has = (x: unknown): boolean => x != null && String(x).trim() !== '';
+
+    const tagId = String(v.tagId ?? '').trim();
+    if (!tagId) issues.push('tagId');
+
+    if (!has(v.species)) issues.push('species');
+    if (!has(v.breed)) issues.push('breed');
+    if (!has(v.sex)) issues.push('sex');
+
+    const birth = this.parseDate(v.birthDate);
+    if (!birth) issues.push('birthDate');
+
+    const weight = this.parseNumber(v.initialWeightKg);
+    if (weight == null || weight <= 0) issues.push('initialWeightKg');
+
+    return {
+      tagId,
+      species: has(v.species) ? normalizeSpecies(v.species) : Species.BOVINE,
+      breed: has(v.breed) ? String(v.breed).trim() : 'Sin especificar',
+      sex: has(v.sex) ? normalizeSex(v.sex) : Sex.FEMALE,
+      birthDate: birth ? birth.toISOString().slice(0, 10) : '',
+      initialWeightKg: weight != null && weight > 0 ? weight : null,
+      issues,
+    };
+  }
+
+  /** Fila de Excel (con mapeo) → fila normalizada para revisar. */
+  private rowToExtracted(
+    row: Record<string, unknown>,
+    mapping: Partial<Record<AppField, string>>,
+  ): ExtractedRow {
+    const get = (field: AppField): unknown => {
+      const header = mapping[field];
+      return header ? row[header] : undefined;
+    };
+    return this.normalizeExtractedRow({
+      tagId: get('tagId') as string,
+      species: get('species') as string,
+      breed: get('breed') as string,
+      sex: get('sex') as string,
+      birthDate: get('birthDate') as string,
+      initialWeightKg: get('initialWeightKg') as string,
+    });
+  }
+
+  private rowHasData(r: ExtractedRow): boolean {
+    return !!(r.tagId || r.breed !== 'Sin especificar' || r.birthDate || r.initialWeightKg);
+  }
+
+  /** Fila revisada → DTO de creación (con defaults seguros). */
+  private extractedToDto(
+    row: ImportRowInput,
+    locationId?: string,
+  ): CreateAnimalDto | null {
+    const tagId = String(row.tagId ?? '').trim();
+    if (!tagId) return null;
+    const weight = this.parseNumber(row.initialWeightKg);
+    const birth = this.parseDate(row.birthDate);
+    return {
+      tagId,
+      species: row.species ? normalizeSpecies(row.species) : Species.BOVINE,
+      breed: String(row.breed ?? '').trim() || 'Sin especificar',
+      sex: row.sex ? normalizeSex(row.sex) : Sex.FEMALE,
+      birthDate: (birth ?? new Date()).toISOString(),
+      initialWeightKg: weight && weight > 0 ? weight : 1,
+      ...(locationId ? { currentLocationId: locationId } : {}),
     };
   }
 

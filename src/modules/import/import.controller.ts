@@ -17,6 +17,7 @@ import type { Response } from 'express';
 import { CurrentUser } from '@modules/auth/decorators/current-user.decorator';
 import { ImportService } from './import.service';
 import { ImportExcelDto } from './dto/import-excel.dto';
+import { ImportRowsDto } from './dto/import-rows.dto';
 import { AppField } from './header-matching';
 
 const EXCEL_LIMIT = 10 * 1024 * 1024; // 10 MB
@@ -63,6 +64,45 @@ export class ImportController {
       throw new BadRequestException('Adjuntá una o más imágenes en el campo "files"');
     }
     return this.importService.importPhotos(est, files);
+  }
+
+  @Post('import/image')
+  @ApiConsumes('multipart/form-data')
+  @ApiOperation({
+    summary: 'Leer con IA una foto (JPG/PNG) de una planilla y devolver filas para revisar',
+  })
+  @UseInterceptors(FileInterceptor('file', { limits: { fileSize: IMAGE_LIMIT } }))
+  extractImage(
+    @UploadedFile() file: Express.Multer.File | undefined,
+  ) {
+    if (!file) {
+      throw new BadRequestException('Adjuntá una imagen en el campo "file"');
+    }
+    return this.importService.extractFromImage(file);
+  }
+
+  @Post('import/preview')
+  @ApiConsumes('multipart/form-data')
+  @ApiOperation({
+    summary: 'Parsear un Excel y devolver las filas para revisar/editar antes de guardar',
+  })
+  @UseInterceptors(FileInterceptor('file', { limits: { fileSize: EXCEL_LIMIT } }))
+  previewExcel(
+    @CurrentUser('establishmentId') est: string,
+    @UploadedFile() file: Express.Multer.File | undefined,
+    @Body() dto: ImportExcelDto,
+  ) {
+    if (!file) {
+      throw new BadRequestException('Adjuntá un archivo Excel en el campo "file"');
+    }
+    const mapping = this.parseMapping(dto.mapping);
+    return this.importService.extractFromExcel(est, file.buffer, mapping);
+  }
+
+  @Post('import/rows')
+  @ApiOperation({ summary: 'Guardar las filas ya revisadas/editadas por el usuario' })
+  saveRows(@CurrentUser('establishmentId') est: string, @Body() dto: ImportRowsDto) {
+    return this.importService.saveRows(est, dto.rows, dto.locationId);
   }
 
   @Get('export/xlsx')

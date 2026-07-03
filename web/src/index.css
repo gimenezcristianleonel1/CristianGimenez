@@ -263,6 +263,36 @@ textarea:focus-visible {
 .age-detail {
   padding: 6px 10px 2px;
 }
+.review-table {
+  border-collapse: collapse;
+  width: 100%;
+  font-size: 0.9rem;
+}
+.review-table th {
+  text-align: left;
+  font-size: 0.75rem;
+  color: var(--muted);
+  padding: 4px 6px;
+  white-space: nowrap;
+}
+.review-table td {
+  padding: 3px 4px;
+  vertical-align: middle;
+}
+.review-table input,
+.review-table select {
+  margin: 0;
+  padding: 6px 8px;
+  min-width: 90px;
+  font-size: 0.9rem;
+}
+.review-table input[type='date'] {
+  min-width: 140px;
+}
+.review-table .cell-issue {
+  border-color: var(--danger);
+  background: #fff7f6;
+}
 .list-item .title {
   font-weight: 600;
   font-size: 1rem;
