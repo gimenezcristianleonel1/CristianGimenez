@@ -131,6 +131,27 @@ export function ageInMonths(birthDate: string, now: Date = new Date()): number {
   return Math.max(0, months);
 }
 
+/**
+ * Edad legible y compacta:
+ *   ≥ 1 año  → "X años y Y meses" (o solo "X años" si no sobran meses)
+ *   1–11 m   → "X meses"
+ *   < 1 mes  → "X días"
+ */
+export function formatAge(birthDate: string, now: Date = new Date()): string {
+  const b = new Date(birthDate);
+  if (Number.isNaN(b.getTime())) return '—';
+  const months = ageInMonths(birthDate, now);
+  if (months >= 12) {
+    const years = Math.floor(months / 12);
+    const rem = months % 12;
+    const y = `${years} año${years === 1 ? '' : 's'}`;
+    return rem ? `${y} y ${rem} mes${rem === 1 ? '' : 'es'}` : y;
+  }
+  if (months >= 1) return `${months} mes${months === 1 ? '' : 'es'}`;
+  const days = Math.max(0, Math.floor((now.getTime() - b.getTime()) / 86_400_000));
+  return `${days} día${days === 1 ? '' : 's'}`;
+}
+
 /** Dientes incisivos permanentes estimados por edad (cronometría dentaria). */
 export function teethFromAge(months: number): 0 | 2 | 4 | 6 | 8 {
   if (months < 12) return 0;

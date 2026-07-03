@@ -17,9 +17,9 @@ import {
   classifyStage,
   reproCountsByAnimal,
   STAGE_LABEL,
-  ageInMonths,
   effectiveTeeth,
   teethLabel,
+  formatAge,
   hasCalfAtFoot,
   TEETH_OPTIONS,
 } from '../lib/ev';
@@ -81,6 +81,7 @@ export default function AnimalDetail() {
   );
   const [tab, setTab] = useState<Tab>('history');
   const [editing, setEditing] = useState(false);
+  const [showAgeDetail, setShowAgeDetail] = useState(false);
 
   if (animal === undefined) return <div className="empty">Cargando…</div>;
   if (animal === null) return <div className="empty">Animal no encontrado.</div>;
@@ -100,12 +101,8 @@ export default function AnimalDetail() {
         ? 'Vaca con ternero al pie'
         : 'Vaca seca'
       : STAGE_LABEL[stage];
-  const months = ageInMonths(animal.birthDate);
   const teeth = effectiveTeeth(animal);
-  const ageText =
-    months >= 12
-      ? `${Math.floor(months / 12)} año(s)${months % 12 ? ` ${months % 12} m` : ''}`
-      : `${months} mes(es)`;
+  const ageText = formatAge(animal.birthDate);
 
   return (
     <div>
@@ -137,9 +134,37 @@ export default function AnimalDetail() {
             </div>
             <div className="sub" style={{ marginTop: 4 }}>
               <span className="badge">{stageText}</span>{' '}
-              <span className="muted">· automática por edad ({ageText}), boca ({teethLabel(teeth)}) e historia reproductiva</span>
+              <span className="muted">· categoría automática</span>
             </div>
-            <div className="sub">Nacimiento: {fmtDate(animal.birthDate)}</div>
+
+            {/* Edad en su apartado; al tocar, muestra boqueo + nacimiento. */}
+            <button
+              type="button"
+              className="age-row"
+              onClick={() => setShowAgeDetail((v) => !v)}
+              aria-expanded={showAgeDetail}
+            >
+              <span>
+                <span className="muted">Edad: </span>
+                <strong>{ageText}</strong>
+              </span>
+              <span className="age-row-hint">
+                {showAgeDetail ? 'ocultar' : 'ver detalle'} {showAgeDetail ? '▴' : '▾'}
+              </span>
+            </button>
+            {showAgeDetail && (
+              <div className="age-detail">
+                <div className="sub">
+                  <span className="muted">Cronometría dentaria (boqueo): </span>
+                  {teethLabel(teeth)}
+                </div>
+                <div className="sub">
+                  <span className="muted">Fecha de nacimiento: </span>
+                  {fmtDate(animal.birthDate)}
+                </div>
+              </div>
+            )}
+
             <div className="sub">Peso inicial: {Number(animal.initialWeightKg)} kg</div>
             <div className="sub">
               Último peso: {lastWeight ? `${Number(lastWeight.weightKg)} kg` : '—'}
