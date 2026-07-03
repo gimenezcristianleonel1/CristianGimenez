@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../db/db';
-import { createTask, setTaskStatus } from '../db/repository';
+import { createTask, setTaskStatus, deleteTask } from '../db/repository';
 import type { TaskRow } from '../lib/types';
 import { Icon } from '../components/Icon';
 import {
@@ -166,6 +166,15 @@ export default function Planificacion() {
                   <div className="task-title struck">{t.title}</div>
                   <div className="sub">{fmtDue(t.completedAt)}</div>
                 </div>
+                <button
+                  className="task-delete"
+                  aria-label="Eliminar tarea"
+                  onClick={() => {
+                    if (window.confirm(`¿Eliminar la tarea "${t.title}"?`)) void deleteTask(t.id);
+                  }}
+                >
+                  Eliminar
+                </button>
               </div>
             ))}
         </div>

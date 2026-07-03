@@ -293,6 +293,18 @@ textarea:focus-visible {
   border-color: var(--danger);
   background: #fff7f6;
 }
+.task-delete {
+  flex: 0 0 auto;
+  background: none;
+  border: none;
+  color: var(--danger);
+  font-size: 0.82rem;
+  cursor: pointer;
+  padding: 4px 6px;
+}
+.task-delete:active {
+  opacity: 0.6;
+}
 .list-item .title {
   font-weight: 600;
   font-size: 1rem;

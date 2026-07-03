@@ -365,6 +365,19 @@ export async function setTaskStatus(taskId: string, status: TaskStatus): Promise
   });
 }
 
+export async function deleteTask(taskId: string): Promise<void> {
+  await db.tasks.delete(taskId);
+  await enqueue({
+    id: uuid(),
+    kind: 'task.delete',
+    method: 'DELETE',
+    path: `/tasks/${taskId}`,
+    body: {},
+    entityTable: 'tasks',
+    entityId: taskId,
+  });
+}
+
 // ------------------------------------------------------ Reproductivo
 
 export interface NewReproCheckInput {

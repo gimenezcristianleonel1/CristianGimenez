@@ -26,4 +26,8 @@ export class TasksRepository {
   update(id: string, data: Prisma.TaskUpdateInput): Promise<Task> {
     return this.prisma.task.update({ where: { id }, data });
   }
+
+  async delete(id: string): Promise<void> {
+    await this.prisma.task.delete({ where: { id } });
+  }
 }

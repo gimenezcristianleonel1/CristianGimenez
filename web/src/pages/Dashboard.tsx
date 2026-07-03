@@ -87,8 +87,9 @@ export default function Dashboard() {
           <p className="muted" style={{ margin: 0 }}>Todavía no hay animales activos.</p>
         ) : (
           <>
-            {catRows.map(([label, n, group]) =>
-              n > 0 ? (
+            {catRows
+              .filter(([, n]) => n > 0)
+              .map(([label, n, group]) => (
                 <Link
                   className="list-item"
                   key={group}
@@ -101,17 +102,7 @@ export default function Dashboard() {
                     <Icon name="back" size={18} className="flip-x" />
                   </span>
                 </Link>
-              ) : (
-                <div
-                  className="list-item"
-                  key={group}
-                  style={{ marginBottom: 8, minHeight: 0, padding: '12px 16px', opacity: 0.55 }}
-                >
-                  <div className="title" style={{ fontSize: '1.05rem' }}>{label}</div>
-                  <span className="badge">{n}</span>
-                </div>
-              ),
-            )}
+              ))}
             <p className="muted" style={{ margin: '4px 2px 0' }}>
               Tocá una categoría para ver esos animales y su historial.
             </p>

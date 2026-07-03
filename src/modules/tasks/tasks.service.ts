@@ -107,6 +107,11 @@ export class TasksService {
     return this.repo.update(id, data);
   }
 
+  async remove(establishmentId: string, id: string): Promise<void> {
+    await this.getOwnedOrThrow(establishmentId, id);
+    await this.repo.delete(id);
+  }
+
   private async getOwnedOrThrow(establishmentId: string, id: string): Promise<Task> {
     const task = await this.repo.findById(id);
     if (!task || task.establishmentId !== establishmentId) {

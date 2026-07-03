@@ -168,6 +168,7 @@ export interface OutboxOp {
     | 'movement.create'
     | 'task.create'
     | 'task.update'
+    | 'task.delete'
     | 'reproductive.create'
     | 'reproductive.event.create'
     | 'animalEvent.create';
