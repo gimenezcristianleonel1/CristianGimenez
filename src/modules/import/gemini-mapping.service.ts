@@ -16,11 +16,14 @@ Campos destino y sinónimos habituales:
 - breed: raza.
 - sex: sexo, genero.
 - birthDate: fecha de nacimiento, nacimiento, f_nac, fnac, nac, dob.
-- initialWeightKg: peso, peso inicial, kg, kilos, pesaje, weight.
+- entryDate: fecha de ingreso, f ingreso, ingreso, entrada, fecha de compra, alta.
+- initialWeightKg: peso, peso inicial, kg, kilos, pesaje, weight, p ingreso, peso de ingreso.
 
+Ojo: "F. INGRESO" (fecha) es entryDate; "P. INGRESO" (peso) es initialWeightKg.
 Te paso la lista EXACTA de columnas del archivo. Respondé SOLO un JSON plano:
 { "tagId": <columna>|null, "species": <columna>|null, "breed": <columna>|null,
-  "sex": <columna>|null, "birthDate": <columna>|null, "initialWeightKg": <columna>|null }
+  "sex": <columna>|null, "birthDate": <columna>|null, "entryDate": <columna>|null,
+  "initialWeightKg": <columna>|null }
 Reglas:
 - El valor debe ser el nombre EXACTO de una columna de la lista, o null si ninguna aplica.
 - No inventes columnas ni uses nombres que no estén en la lista.

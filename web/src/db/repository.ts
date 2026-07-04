@@ -35,6 +35,7 @@ export interface NewAnimalInput {
   breed: string;
   sex: Sex;
   birthDate: string;
+  entryDate?: string | null;
   initialWeightKg: number;
   currentLocationId?: string | null;
   motherId?: string | null;
@@ -53,6 +54,7 @@ export async function createAnimal(input: NewAnimalInput): Promise<string> {
     breed: input.breed,
     sex: input.sex,
     birthDate: input.birthDate,
+    entryDate: input.entryDate ?? null,
     initialWeightKg: input.initialWeightKg,
     status: 'ACTIVE',
     currentLocationId: input.currentLocationId ?? null,
@@ -86,6 +88,7 @@ export interface AnimalEditInput {
   breed?: string;
   sex?: Sex;
   birthDate?: string;
+  entryDate?: string | null;
   initialWeightKg?: number;
   observations?: string | null;
   metadata?: Record<string, unknown>;

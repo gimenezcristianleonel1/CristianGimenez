@@ -76,6 +76,7 @@ export class AnimalsService {
       breed: dto.breed,
       sex: dto.sex,
       birthDate: new Date(dto.birthDate),
+      entryDate: dto.entryDate ? new Date(dto.entryDate) : null,
       initialWeightKg: new Prisma.Decimal(dto.initialWeightKg),
       observations: dto.observations ?? null,
       metadata: (dto.metadata ?? {}) as Prisma.InputJsonValue,
@@ -160,6 +161,9 @@ export class AnimalsService {
       ...(dto.breed !== undefined ? { breed: dto.breed } : {}),
       ...(dto.sex !== undefined ? { sex: dto.sex } : {}),
       ...(dto.birthDate !== undefined ? { birthDate: new Date(dto.birthDate) } : {}),
+      ...(dto.entryDate !== undefined
+        ? { entryDate: dto.entryDate ? new Date(dto.entryDate) : null }
+        : {}),
       ...(dto.initialWeightKg !== undefined
         ? { initialWeightKg: new Prisma.Decimal(dto.initialWeightKg) }
         : {}),

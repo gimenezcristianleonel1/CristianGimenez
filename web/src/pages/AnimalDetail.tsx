@@ -162,6 +162,10 @@ export default function AnimalDetail() {
                   <span className="muted">Fecha de nacimiento: </span>
                   {fmtDate(animal.birthDate)}
                 </div>
+                <div className="sub">
+                  <span className="muted">Fecha de ingreso: </span>
+                  {animal.entryDate ? fmtDate(animal.entryDate) : '—'}
+                </div>
               </div>
             )}
 
@@ -499,6 +503,7 @@ function AnimalEditForm({
   const [breed, setBreed] = useState(animal.breed);
   const [sex, setSex] = useState<Sex>(animal.sex);
   const [birthDate, setBirthDate] = useState(animal.birthDate.slice(0, 10));
+  const [entryDate, setEntryDate] = useState(animal.entryDate ? animal.entryDate.slice(0, 10) : '');
   const [weight, setWeight] = useState(String(Number(animal.initialWeightKg)));
   const [observations, setObservations] = useState(animal.observations ?? '');
   const meta0 = (animal.metadata ?? {}) as Record<string, unknown>;
@@ -517,6 +522,7 @@ function AnimalEditForm({
     const w = Number(weight);
     if (!(w > 0)) return setError('El peso debe ser mayor a 0');
     if (birthDate > today) return setError('La fecha de nacimiento no puede ser futura');
+    if (entryDate && entryDate > today) return setError('La fecha de ingreso no puede ser futura');
 
     // Sólo enviamos lo que cambió.
     const changes: AnimalEditInput = {};
@@ -526,6 +532,10 @@ function AnimalEditForm({
     if (sex !== animal.sex) changes.sex = sex;
     if (birthDate !== animal.birthDate.slice(0, 10)) {
       changes.birthDate = new Date(birthDate).toISOString();
+    }
+    const entry0 = animal.entryDate ? animal.entryDate.slice(0, 10) : '';
+    if (entryDate !== entry0) {
+      changes.entryDate = entryDate ? new Date(entryDate).toISOString() : null;
     }
     if (w !== Number(animal.initialWeightKg)) changes.initialWeightKg = w;
     if (observations.trim() !== (animal.observations ?? '').trim()) {
@@ -596,6 +606,8 @@ function AnimalEditForm({
           />
         </div>
       </div>
+      <label>Fecha de ingreso (opcional)</label>
+      <input type="date" max={today} value={entryDate} onChange={(e) => setEntryDate(e.target.value)} />
       <label>Boqueo — dientes (opcional)</label>
       <select value={teeth} onChange={(e) => setTeeth(e.target.value)}>
         <option value="">Automático por edad</option>

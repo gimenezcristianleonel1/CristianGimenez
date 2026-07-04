@@ -34,6 +34,7 @@ export interface Animal {
   breed: string;
   sex: Sex;
   birthDate: string;
+  entryDate?: string | null;
   initialWeightKg: number | string;
   status: AnimalStatus;
   currentLocationId: string | null;

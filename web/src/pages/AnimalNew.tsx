@@ -19,6 +19,7 @@ export default function AnimalNew() {
   const [breed, setBreed] = useState('');
   const [sex, setSex] = useState<Sex>('FEMALE');
   const [birthDate, setBirthDate] = useState(today());
+  const [entryDate, setEntryDate] = useState('');
   const [initialWeightKg, setInitialWeightKg] = useState('');
   const [currentLocationId, setCurrentLocationId] = useState('');
   const [motherId, setMotherId] = useState('');
@@ -61,6 +62,7 @@ export default function AnimalNew() {
         breed: breed.trim(),
         sex,
         birthDate: new Date(birthDate).toISOString(),
+        entryDate: entryDate ? new Date(entryDate).toISOString() : null,
         initialWeightKg: weight,
         currentLocationId: currentLocationId || null,
         motherId: motherId || null,
@@ -124,6 +126,9 @@ export default function AnimalNew() {
           />
         </div>
       </div>
+
+      <label>Fecha de ingreso (opcional)</label>
+      <input type="date" value={entryDate} max={today()} onChange={(e) => setEntryDate(e.target.value)} />
 
       <label>Boqueo — dientes (opcional)</label>
       <select value={teeth} onChange={(e) => setTeeth(e.target.value)}>

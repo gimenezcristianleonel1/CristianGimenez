@@ -4,7 +4,14 @@ import { api, apiUpload, ApiError, downloadFile } from '../api/client';
 import { db } from '../db/db';
 import { useSync } from '../sync/SyncProvider';
 
-type AppField = 'tagId' | 'species' | 'breed' | 'sex' | 'birthDate' | 'initialWeightKg';
+type AppField =
+  | 'tagId'
+  | 'species'
+  | 'breed'
+  | 'sex'
+  | 'birthDate'
+  | 'entryDate'
+  | 'initialWeightKg';
 
 /** Fila editable de la revisión previa a guardar. */
 interface ReviewRow {
@@ -13,6 +20,7 @@ interface ReviewRow {
   breed: string;
   sex: string;
   birthDate: string;
+  entryDate: string;
   initialWeightKg: string;
   issues: AppField[];
 }
@@ -25,6 +33,7 @@ interface ExtractResult {
     breed: string;
     sex: string;
     birthDate: string;
+    entryDate: string;
     initialWeightKg: number | null;
     issues: AppField[];
   }>;
@@ -165,6 +174,7 @@ export default function Import() {
         breed: r.breed ?? '',
         sex: r.sex || 'FEMALE',
         birthDate: r.birthDate ?? '',
+        entryDate: r.entryDate ?? '',
         initialWeightKg: r.initialWeightKg != null ? String(r.initialWeightKg) : '',
         issues: r.issues ?? [],
       })),
@@ -232,7 +242,7 @@ export default function Import() {
   function addRow() {
     setReview((rows) => [
       ...(rows ?? []),
-      { tagId: '', species: 'BOVINE', breed: '', sex: 'FEMALE', birthDate: '', initialWeightKg: '', issues: ['tagId'] },
+      { tagId: '', species: 'BOVINE', breed: '', sex: 'FEMALE', birthDate: '', entryDate: '', initialWeightKg: '', issues: ['tagId'] },
     ]);
   }
   function removeRow(i: number) {
@@ -249,6 +259,7 @@ export default function Import() {
         breed: r.breed.trim(),
         sex: r.sex,
         birthDate: r.birthDate,
+        entryDate: r.entryDate,
         initialWeightKg: r.initialWeightKg,
       }));
     if (rows.length === 0) {
@@ -376,6 +387,7 @@ export default function Import() {
                   <th>Raza</th>
                   <th>Sexo</th>
                   <th>Nacimiento</th>
+                  <th>Ingreso</th>
                   <th>Peso (kg)</th>
                   <th></th>
                 </tr>
@@ -425,6 +437,14 @@ export default function Import() {
                           className={bad('birthDate')}
                           value={r.birthDate}
                           onChange={(e) => editRow(i, 'birthDate', e.target.value)}
+                        />
+                      </td>
+                      <td>
+                        <input
+                          type="date"
+                          className={bad('entryDate')}
+                          value={r.entryDate}
+                          onChange={(e) => editRow(i, 'entryDate', e.target.value)}
                         />
                       </td>
                       <td>

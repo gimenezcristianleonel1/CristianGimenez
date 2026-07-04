@@ -43,6 +43,11 @@ export class UpdateAnimalDto {
   @IsNotFutureDate({ message: 'birthDate cannot be in the future' })
   birthDate?: string;
 
+  @ApiPropertyOptional({ example: '2025-04-12', description: 'Fecha de ingreso. No futura.' })
+  @IsOptional()
+  @IsNotFutureDate({ message: 'entryDate cannot be in the future' })
+  entryDate?: string;
+
   @ApiPropertyOptional({ example: 46.2, description: 'Peso inicial en kg (> 0)' })
   @IsOptional()
   @IsPositive()

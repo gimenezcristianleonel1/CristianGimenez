@@ -8,6 +8,7 @@ export interface VisionRow {
   breed?: string | null;
   sex?: string | null;
   birthDate?: string | null;
+  entryDate?: string | null;
   initialWeightKg?: number | string | null;
 }
 
@@ -21,13 +22,15 @@ Cada Row:
   "species": string|null,        // ej "bovino", "vacuno", "ovino"
   "breed": string|null,          // raza
   "sex": string|null,            // "macho"/"hembra"/"M"/"H"
-  "birthDate": string|null,      // fecha si aparece (en su formato original)
-  "initialWeightKg": number|null // peso en kg si aparece
+  "birthDate": string|null,      // fecha de NACIMIENTO si aparece (formato original)
+  "entryDate": string|null,      // fecha de INGRESO/ingreso/entrada/compra/destete si aparece
+  "initialWeightKg": number|null // peso en kg si aparece (ej. "P. INGRESO", "peso")
 }
 Reglas:
 - Una fila por animal. Si un dato no está, poné null (NO inventes).
 - Devolvé TODAS las filas visibles, aunque falten columnas.
 - En "tagId" va solo el identificador de la caravana.
+- OJO: una columna "F. INGRESO"/"Fecha ingreso" es entryDate, NO birthDate.
 `;
 
 /**

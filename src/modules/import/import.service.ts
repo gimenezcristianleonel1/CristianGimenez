@@ -52,6 +52,7 @@ export interface ExtractedRow {
   breed: string;
   sex: Sex;
   birthDate: string; // yyyy-mm-dd ('' si no se detectó)
+  entryDate: string; // yyyy-mm-dd ('' si no se detectó)
   initialWeightKg: number | null;
   /** Campos que la IA/planilla no supo con certeza (para resaltar en la tabla). */
   issues: AppField[];
@@ -70,6 +71,7 @@ export interface ImportRowInput {
   breed?: string;
   sex?: string;
   birthDate?: string;
+  entryDate?: string;
   initialWeightKg?: string | number | null;
 }
 
@@ -360,6 +362,9 @@ export class ImportService {
     const birth = this.parseDate(v.birthDate);
     if (!birth) issues.push('birthDate');
 
+    const entry = this.parseDate(v.entryDate);
+    if (!entry) issues.push('entryDate');
+
     const weight = this.parseNumber(v.initialWeightKg);
     if (weight == null || weight <= 0) issues.push('initialWeightKg');
 
@@ -369,6 +374,7 @@ export class ImportService {
       breed: has(v.breed) ? String(v.breed).trim() : 'Sin especificar',
       sex: has(v.sex) ? normalizeSex(v.sex) : Sex.FEMALE,
       birthDate: birth ? birth.toISOString().slice(0, 10) : '',
+      entryDate: entry ? entry.toISOString().slice(0, 10) : '',
       initialWeightKg: weight != null && weight > 0 ? weight : null,
       issues,
     };
@@ -389,6 +395,7 @@ export class ImportService {
       breed: get('breed') as string,
       sex: get('sex') as string,
       birthDate: get('birthDate') as string,
+      entryDate: get('entryDate') as string,
       initialWeightKg: get('initialWeightKg') as string,
     });
   }
@@ -406,12 +413,14 @@ export class ImportService {
     if (!tagId) return null;
     const weight = this.parseNumber(row.initialWeightKg);
     const birth = this.parseDate(row.birthDate);
+    const entry = this.parseDate(row.entryDate);
     return {
       tagId,
       species: row.species ? normalizeSpecies(row.species) : Species.BOVINE,
       breed: String(row.breed ?? '').trim() || 'Sin especificar',
       sex: row.sex ? normalizeSex(row.sex) : Sex.FEMALE,
       birthDate: (birth ?? new Date()).toISOString(),
+      ...(entry ? { entryDate: entry.toISOString() } : {}),
       initialWeightKg: weight && weight > 0 ? weight : 1,
       ...(locationId ? { currentLocationId: locationId } : {}),
     };
@@ -587,6 +596,7 @@ export class ImportService {
       { header: 'Raza', key: 'breed', width: 16 },
       { header: 'Sexo', key: 'sex', width: 10 },
       { header: 'Fecha de nacimiento', key: 'birthDate', width: 18 },
+      { header: 'Fecha de ingreso', key: 'entryDate', width: 18 },
       { header: 'Peso inicial (kg)', key: 'initialWeightKg', width: 16 },
       { header: 'Estado', key: 'status', width: 14 },
     ];
@@ -599,6 +609,7 @@ export class ImportService {
         breed: a.breed,
         sex: a.sex,
         birthDate: a.birthDate.toISOString().slice(0, 10),
+        entryDate: a.entryDate ? a.entryDate.toISOString().slice(0, 10) : '',
         initialWeightKg: Number(a.initialWeightKg),
         status: a.status,
       });

@@ -255,6 +255,8 @@ model Animal {
   breed  String
   sex    Sex
   birthDate      DateTime @map("birth_date") @db.Date
+  /// Fecha de ingreso al establecimiento (compra, destete, traslado). Opcional.
+  entryDate      DateTime? @map("entry_date") @db.Date
   /// Peso al alta (kg). El histórico vive en WeightHistory.
   initialWeightKg Decimal @map("initial_weight_kg") @db.Decimal(7, 2)
   status AnimalStatus @default(ACTIVE)

@@ -1,7 +1,14 @@
 import { Sex, Species } from '@prisma/client';
 
 /** Campos de nuestro esquema que la importación puede completar. */
-export type AppField = 'tagId' | 'species' | 'breed' | 'sex' | 'birthDate' | 'initialWeightKg';
+export type AppField =
+  | 'tagId'
+  | 'species'
+  | 'breed'
+  | 'sex'
+  | 'birthDate'
+  | 'entryDate'
+  | 'initialWeightKg';
 
 export const APP_FIELDS: AppField[] = [
   'tagId',
@@ -9,6 +16,7 @@ export const APP_FIELDS: AppField[] = [
   'breed',
   'sex',
   'birthDate',
+  'entryDate',
   'initialWeightKg',
 ];
 
@@ -22,6 +30,7 @@ export const FIELD_LABELS: Record<AppField, string> = {
   breed: 'Raza',
   sex: 'Sexo',
   birthDate: 'Fecha de nacimiento',
+  entryDate: 'Fecha de ingreso',
   initialWeightKg: 'Peso inicial (kg)',
 };
 
@@ -55,12 +64,27 @@ const FIELD_SYNONYMS: Record<AppField, string[]> = {
     'birth date',
     'birthdate',
   ],
+  entryDate: [
+    'fecha de ingreso',
+    'fecha ingreso',
+    'f ingreso',
+    'ingreso',
+    'fecha de entrada',
+    'fecha entrada',
+    'entrada',
+    'fecha de compra',
+    'fecha compra',
+    'alta',
+    'fecha alta',
+  ],
   initialWeightKg: [
     'peso',
     'peso inicial',
     'peso kg',
     'peso alta',
     'peso ingreso',
+    'peso de ingreso',
+    'p ingreso',
     'kilos',
     'weight',
     'kg',
