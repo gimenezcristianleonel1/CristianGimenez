@@ -19,7 +19,6 @@ import { ReportsModule } from '@modules/reports/reports.module';
 import { ReproductiveModule } from '@modules/reproductive/reproductive.module';
 import { SanitaryModule } from '@modules/sanitary/sanitary.module';
 import { TasksModule } from '@modules/tasks/tasks.module';
-import { WhatsappModule } from '@modules/whatsapp/whatsapp.module';
 
 @Module({
   imports: [
@@ -53,8 +52,6 @@ import { WhatsappModule } from '@modules/whatsapp/whatsapp.module';
     TasksModule,
     ReportsModule,
     ReproductiveModule,
-    // Bot de WhatsApp (aislado: rutas públicas /whatsapp/webhook, no toca el resto).
-    WhatsappModule,
   ],
   providers: [
     // Authentication is required by default; routes opt out with @Public().
