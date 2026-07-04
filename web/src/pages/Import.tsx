@@ -11,7 +11,9 @@ type AppField =
   | 'sex'
   | 'birthDate'
   | 'entryDate'
-  | 'initialWeightKg';
+  | 'initialWeightKg'
+  | 'category'
+  | 'observations';
 
 /** Fila editable de la revisión previa a guardar. */
 interface ReviewRow {
@@ -22,6 +24,8 @@ interface ReviewRow {
   birthDate: string;
   entryDate: string;
   initialWeightKg: string;
+  category: string;
+  observations: string;
   issues: AppField[];
 }
 interface ExtractResult {
@@ -35,6 +39,8 @@ interface ExtractResult {
     birthDate: string;
     entryDate: string;
     initialWeightKg: number | null;
+    category: string;
+    observations: string;
     issues: AppField[];
   }>;
 }
@@ -51,6 +57,16 @@ const SEX_OPTS: Array<[string, string]> = [
   ['FEMALE', 'Hembra'],
   ['MALE', 'Macho'],
 ];
+const CATEGORY_OPTS: Array<[string, string]> = [
+  ['', 'Automática'],
+  ['VACA_CON_TERNERO', 'Vaca con ternero'],
+  ['VACA_SECA', 'Vaca seca'],
+  ['VAQUILLONA', 'Vaquillona'],
+  ['TERNERO', 'Ternero/a'],
+  ['NOVILLITO', 'Novillito'],
+  ['NOVILLO', 'Novillo'],
+  ['TORO', 'Toro'],
+];
 
 interface ImportOk {
   status: 'OK';
@@ -59,10 +75,6 @@ interface ImportOk {
   skipped: number;
   errors: Array<{ row: number; message: string }>;
   savedTemplate: boolean;
-}
-interface PhotoResult {
-  matched: Array<{ filename: string; tagId: string }>;
-  unmatched: string[];
 }
 
 /**
@@ -158,7 +170,6 @@ export default function Import() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [result, setResult] = useState<ImportOk | null>(null);
-  const [photos, setPhotos] = useState<PhotoResult | null>(null);
   const [destLocation, setDestLocation] = useState('');
   // Revisión previa (foto/Excel) antes de guardar.
   const [review, setReview] = useState<ReviewRow[] | null>(null);
@@ -176,6 +187,8 @@ export default function Import() {
         birthDate: r.birthDate ?? '',
         entryDate: r.entryDate ?? '',
         initialWeightKg: r.initialWeightKg != null ? String(r.initialWeightKg) : '',
+        category: r.category ?? '',
+        observations: r.observations ?? '',
         issues: r.issues ?? [],
       })),
     );
@@ -242,7 +255,18 @@ export default function Import() {
   function addRow() {
     setReview((rows) => [
       ...(rows ?? []),
-      { tagId: '', species: 'BOVINE', breed: '', sex: 'FEMALE', birthDate: '', entryDate: '', initialWeightKg: '', issues: ['tagId'] },
+      {
+        tagId: '',
+        species: 'BOVINE',
+        breed: '',
+        sex: 'FEMALE',
+        birthDate: '',
+        entryDate: '',
+        initialWeightKg: '',
+        category: '',
+        observations: '',
+        issues: ['tagId'],
+      },
     ]);
   }
   function removeRow(i: number) {
@@ -261,6 +285,8 @@ export default function Import() {
         birthDate: r.birthDate,
         entryDate: r.entryDate,
         initialWeightKg: r.initialWeightKg,
+        category: r.category,
+        observations: r.observations.trim(),
       }));
     if (rows.length === 0) {
       setError('Cargá al menos la caravana en una fila.');
@@ -279,21 +305,6 @@ export default function Import() {
       void sync();
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'No se pudieron guardar los animales');
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  async function uploadPhotos(files: File[]) {
-    setBusy(true);
-    setError('');
-    setPhotos(null);
-    try {
-      const fd = new FormData();
-      files.forEach((f) => fd.append('files', f));
-      setPhotos(await apiUpload<PhotoResult>('/animals/import/photos', fd));
-    } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'No se pudieron subir las fotos');
     } finally {
       setBusy(false);
     }
@@ -389,6 +400,8 @@ export default function Import() {
                   <th>Nacimiento</th>
                   <th>Ingreso</th>
                   <th>Peso (kg)</th>
+                  <th>Categoría</th>
+                  <th>Observaciones</th>
                   <th></th>
                 </tr>
               </thead>
@@ -458,6 +471,26 @@ export default function Import() {
                         />
                       </td>
                       <td>
+                        <select
+                          value={r.category}
+                          onChange={(e) => editRow(i, 'category', e.target.value)}
+                        >
+                          {CATEGORY_OPTS.map(([v, l]) => (
+                            <option key={v} value={v}>
+                              {l}
+                            </option>
+                          ))}
+                        </select>
+                      </td>
+                      <td>
+                        <input
+                          value={r.observations}
+                          onChange={(e) => editRow(i, 'observations', e.target.value)}
+                          placeholder="—"
+                          style={{ minWidth: 180 }}
+                        />
+                      </td>
+                      <td>
                         <button className="btn-link-muted" onClick={() => removeRow(i)} aria-label="Quitar fila">
                           ✕
                         </button>
@@ -478,32 +511,6 @@ export default function Import() {
           </div>
         </div>
       )}
-
-      {/* ---- Fotos de los animales (utilidad aparte: asocia por caravana) ---- */}
-      <div className="card">
-        <h2>Fotos de los animales (opcional)</h2>
-        <p className="muted" style={{ marginTop: 0 }}>
-          Distinto a importar datos: acá subís la <strong>foto de cada animal</strong>. El nombre del
-          archivo se asocia a la caravana (ej. <code>2044.jpg</code> → animal 2044).
-        </p>
-        <Dropzone
-          label="Arrastrá las fotos de los animales acá o tocá para elegir"
-          accept="image/*"
-          multiple
-          onFiles={(files) => void uploadPhotos(files)}
-        />
-        {photos && (
-          <div className="ok" style={{ marginTop: 12 }}>
-            Asociadas: <strong>{photos.matched.length}</strong> · Sin coincidencia:{' '}
-            {photos.unmatched.length}
-            {photos.unmatched.length > 0 && (
-              <div className="muted" style={{ fontSize: 13 }}>
-                Sin match: {photos.unmatched.join(', ')}
-              </div>
-            )}
-          </div>
-        )}
-      </div>
 
       {/* ---- Export ---- */}
       <div className="card">
