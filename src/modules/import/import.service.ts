@@ -424,8 +424,21 @@ export class ImportService {
     const workbook = new ExcelJS.Workbook();
     try {
       if (isCsv) {
-        const stream = Readable.from(buffer.toString('utf8'));
-        await workbook.csv.read(stream);
+        // Quita el BOM y detecta el separador (coma, punto y coma o tab):
+        // los Excel en es-AR suelen exportar CSV con ";".
+        const text = buffer.toString('utf8').replace(/^﻿/, '');
+        const firstLine = text.split(/\r?\n/, 1)[0] ?? '';
+        const count = (ch: string) => firstLine.split(ch).length - 1;
+        const delimiter =
+          count(';') > count(',') && count(';') >= count('\t')
+            ? ';'
+            : count('\t') > count(',')
+              ? '\t'
+              : ',';
+        const stream = Readable.from(text);
+        await workbook.csv.read(stream, {
+          parserOptions: { delimiter },
+        } as unknown as Parameters<typeof workbook.csv.read>[1]);
       } else {
         // Cast por diferencias de tipos entre @types/node (Buffer) y exceljs.
         await workbook.xlsx.load(buffer as unknown as ExcelJS.Buffer);

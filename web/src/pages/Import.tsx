@@ -56,6 +56,43 @@ interface PhotoResult {
   unmatched: string[];
 }
 
+/**
+ * Reduce una foto grande (del celular) a un JPEG chico antes de subirla: más
+ * rápido, más barato para la IA y evita límites de tamaño. Si el navegador no
+ * puede decodificarla (p. ej. HEIC en algún navegador), sube el original.
+ */
+async function downscaleImage(file: File, maxDim = 1600, quality = 0.85): Promise<File> {
+  if (!file.type.startsWith('image/')) return file;
+  try {
+    let bitmap: ImageBitmap;
+    try {
+      bitmap = await createImageBitmap(file, { imageOrientation: 'from-image' });
+    } catch {
+      bitmap = await createImageBitmap(file);
+    }
+    const scale = Math.min(1, maxDim / Math.max(bitmap.width, bitmap.height));
+    if (scale >= 1 && file.size < 1_200_000) {
+      bitmap.close?.();
+      return file; // ya es chica: no vale la pena reprocesar
+    }
+    const w = Math.max(1, Math.round(bitmap.width * scale));
+    const h = Math.max(1, Math.round(bitmap.height * scale));
+    const canvas = document.createElement('canvas');
+    canvas.width = w;
+    canvas.height = h;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return file;
+    ctx.drawImage(bitmap, 0, 0, w, h);
+    bitmap.close?.();
+    const blob = await new Promise<Blob | null>((res) => canvas.toBlob(res, 'image/jpeg', quality));
+    if (!blob) return file;
+    const base = file.name.replace(/\.[^.]+$/, '') || 'foto';
+    return new File([blob], `${base}.jpg`, { type: 'image/jpeg' });
+  } catch {
+    return file;
+  }
+}
+
 /** Zona de arrastrar y soltar (con click de respaldo). */
 function Dropzone({
   label,
@@ -141,10 +178,10 @@ export default function Import() {
     setReview(null);
     try {
       const fd = new FormData();
-      fd.append('file', file);
+      fd.append('file', await downscaleImage(file));
       const res = await apiUpload<ExtractResult>('/animals/import/image', fd);
       if (!res.rows?.length) {
-        setError('No pude leer datos en la imagen. Probá con una foto más nítida.');
+        setError('No pude leer datos en la imagen. Probá con una foto más nítida y derecha.');
       } else {
         openReview(res);
       }

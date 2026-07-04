@@ -21,7 +21,8 @@ import { ImportRowsDto } from './dto/import-rows.dto';
 import { AppField } from './header-matching';
 
 const EXCEL_LIMIT = 10 * 1024 * 1024; // 10 MB
-const IMAGE_LIMIT = 8 * 1024 * 1024; // 8 MB c/u
+const IMAGE_LIMIT = 8 * 1024 * 1024; // 8 MB c/u (fotos de animales)
+const IMPORT_IMAGE_LIMIT = 15 * 1024 * 1024; // 15 MB (foto de planilla; el cliente ya la reduce)
 const MAX_IMAGES = 50;
 
 @ApiTags('Import')
@@ -94,7 +95,7 @@ export class ImportController {
   @ApiOperation({
     summary: 'Leer con IA una foto (JPG/PNG) de una planilla y devolver filas para revisar',
   })
-  @UseInterceptors(FileInterceptor('file', { limits: { fileSize: IMAGE_LIMIT } }))
+  @UseInterceptors(FileInterceptor('file', { limits: { fileSize: IMPORT_IMAGE_LIMIT } }))
   extractImage(
     @UploadedFile() file: Express.Multer.File | undefined,
   ) {
