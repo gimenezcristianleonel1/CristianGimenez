@@ -128,11 +128,11 @@ function AnimalPicker({
  * (o uno nuevo si nació): vacuna, desparasitación, tratamiento, pesaje,
  * servicio, nota, muerte o nacimiento. Todo offline-first (se encola y sincroniza).
  */
-export default function FieldRecorder() {
+export default function FieldRecorder({ alwaysOpen = false }: { alwaysOpen?: boolean } = {}) {
   const animals = useLiveQuery(() => db.animals.toArray(), [], []);
   const locations = useLiveQuery(() => db.locations.toArray(), [], []);
 
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(alwaysOpen);
   const [action, setAction] = useState<FieldAction>('VACCINATION');
   const [date, setDate] = useState(todayStr());
   const [busy, setBusy] = useState(false);
@@ -303,9 +303,11 @@ export default function FieldRecorder() {
     <div className="card">
       <div className="section-title" style={{ margin: 0 }}>
         <h2>Registrar en el campo</h2>
-        <button className="btn-link" onClick={() => setOpen(false)}>
-          Cerrar
-        </button>
+        {!alwaysOpen && (
+          <button className="btn-link" onClick={() => setOpen(false)}>
+            Cerrar
+          </button>
+        )}
       </div>
       <p className="muted" style={{ marginTop: 4 }}>
         Anotá lo que pasó hoy (vacuna, tratamiento, muerte, nacimiento…) sobre un animal existente o

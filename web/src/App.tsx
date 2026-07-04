@@ -11,6 +11,7 @@ import AsignarPotrero from './pages/AsignarPotrero';
 import Perfil from './pages/Perfil';
 import Import from './pages/Import';
 import Planificacion from './pages/Planificacion';
+import RegistroCampo from './pages/RegistroCampo';
 import Analisis from './pages/Analisis';
 import CargaPotreros from './pages/CargaPotreros';
 import Reproductivo from './pages/Reproductivo';
@@ -32,6 +33,7 @@ export default function App() {
         <Route path="locations/:id" element={<LocationEdit />} />
         <Route path="import" element={<Import />} />
         <Route path="tasks" element={<Planificacion />} />
+        <Route path="campo" element={<RegistroCampo />} />
         <Route path="analisis" element={<Analisis />} />
         <Route path="analisis/carga" element={<CargaPotreros />} />
         <Route path="analisis/reproductivo" element={<Reproductivo />} />
