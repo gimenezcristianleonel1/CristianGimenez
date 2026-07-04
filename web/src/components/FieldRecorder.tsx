@@ -12,29 +12,26 @@ import {
 import { sexLabel, speciesLabel } from '../lib/labels';
 import type { Animal, Sex, Species } from '../lib/types';
 
-/** Acciones que se registran a diario en el campo. */
-type FieldAction =
-  | 'VACCINATION'
-  | 'DEWORMING'
-  | 'TREATMENT'
-  | 'WEIGHT'
-  | 'SERVICE'
-  | 'NOTE'
-  | 'DEATH'
-  | 'BIRTH';
+/** Acciones que se registran a diario en el campo (en orden de aparición). */
+type FieldAction = 'BIRTH' | 'DEATH' | 'TREATMENT' | 'SERVICE' | 'NOTE';
 
 const ACTIONS: Array<{ key: FieldAction; label: string }> = [
-  { key: 'VACCINATION', label: 'Vacunación' },
-  { key: 'DEWORMING', label: 'Desparasitación' },
+  { key: 'BIRTH', label: 'Nacimiento' },
+  { key: 'DEATH', label: 'Muerte' },
   { key: 'TREATMENT', label: 'Tratamiento' },
-  { key: 'WEIGHT', label: 'Pesaje' },
   { key: 'SERVICE', label: 'Servicio' },
   { key: 'NOTE', label: 'Nota' },
-  { key: 'DEATH', label: 'Muerte' },
-  { key: 'BIRTH', label: 'Nacimiento' },
 ];
 
-const HEALTH_ACTIONS: FieldAction[] = ['VACCINATION', 'DEWORMING', 'TREATMENT'];
+/** Sub-tipos que despliega "Tratamiento". */
+type TreatmentKind = 'VACCINATION' | 'DEWORMING' | 'MEDICATION' | 'WEIGHT';
+
+const TREATMENT_KINDS: Array<{ key: TreatmentKind; label: string }> = [
+  { key: 'VACCINATION', label: 'Vacuna' },
+  { key: 'DEWORMING', label: 'Antiparasitario' },
+  { key: 'MEDICATION', label: 'Otra droga / tratamiento' },
+  { key: 'WEIGHT', label: 'Pesaje' },
+];
 const todayStr = () => new Date().toISOString().slice(0, 10);
 /**
  * Fecha (yyyy-mm-dd) → ISO. Para HOY usa el instante actual (así nunca queda en
@@ -133,7 +130,8 @@ export default function FieldRecorder({ alwaysOpen = false }: { alwaysOpen?: boo
   const locations = useLiveQuery(() => db.locations.toArray(), [], []);
 
   const [open, setOpen] = useState(alwaysOpen);
-  const [action, setAction] = useState<FieldAction>('VACCINATION');
+  const [action, setAction] = useState<FieldAction>('BIRTH');
+  const [treatmentKind, setTreatmentKind] = useState<TreatmentKind>('VACCINATION');
   const [date, setDate] = useState(todayStr());
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState('');
@@ -238,26 +236,35 @@ export default function FieldRecorder({ alwaysOpen = false }: { alwaysOpen?: boo
 
     setBusy(true);
     try {
-      if (HEALTH_ACTIONS.includes(action)) {
-        if (action === 'TREATMENT' && !medication.trim()) {
-          setBusy(false);
-          return setError('Indicá el medicamento del tratamiento');
+      if (action === 'TREATMENT') {
+        if (treatmentKind === 'WEIGHT') {
+          const w = Number(weight);
+          if (!(w > 0)) {
+            setBusy(false);
+            return setError('El peso debe ser mayor a 0');
+          }
+          await addWeight(animal.id, { weightKg: w, measuredAt: iso });
+          setMsg(`Pesaje de ${w} kg registrado en ${animal.tagId}.`);
+        } else {
+          if (treatmentKind === 'MEDICATION' && !medication.trim()) {
+            setBusy(false);
+            return setError('Indicá la droga / medicamento del tratamiento');
+          }
+          const eventType =
+            treatmentKind === 'VACCINATION'
+              ? 'VACCINATION'
+              : treatmentKind === 'DEWORMING'
+                ? 'DEWORMING'
+                : 'TREATMENT';
+          await addHealth(animal.id, {
+            eventType,
+            medication: medication.trim() || undefined,
+            withdrawalDays: Number(withdrawalDays) || 0,
+            appliedAt: iso,
+          });
+          const kindLabel = TREATMENT_KINDS.find((k) => k.key === treatmentKind)?.label ?? 'Tratamiento';
+          setMsg(`${kindLabel} registrado en ${animal.tagId}.`);
         }
-        await addHealth(animal.id, {
-          eventType: action as 'VACCINATION' | 'DEWORMING' | 'TREATMENT',
-          medication: medication.trim() || undefined,
-          withdrawalDays: Number(withdrawalDays) || 0,
-          appliedAt: iso,
-        });
-        setMsg(`Registrado en ${animal.tagId}.`);
-      } else if (action === 'WEIGHT') {
-        const w = Number(weight);
-        if (!(w > 0)) {
-          setBusy(false);
-          return setError('El peso debe ser mayor a 0');
-        }
-        await addWeight(animal.id, { weightKg: w, measuredAt: iso });
-        setMsg(`Pesaje de ${w} kg registrado en ${animal.tagId}.`);
       } else if (action === 'SERVICE') {
         await createReproEvent({
           animalId: animal.id,
@@ -292,17 +299,15 @@ export default function FieldRecorder({ alwaysOpen = false }: { alwaysOpen?: boo
   if (!open) {
     return (
       <button className="btn btn-outline" style={{ width: '100%' }} onClick={() => setOpen(true)}>
-        Registrar trabajo en el campo
+        Nuevo Registro
       </button>
     );
   }
 
-  const isHealth = HEALTH_ACTIONS.includes(action);
-
   return (
     <div className="card">
       <div className="section-title" style={{ margin: 0 }}>
-        <h2>Registrar en el campo</h2>
+        <h2>Nuevo Registro</h2>
         {!alwaysOpen && (
           <button className="btn-link" onClick={() => setOpen(false)}>
             Cerrar
@@ -310,8 +315,8 @@ export default function FieldRecorder({ alwaysOpen = false }: { alwaysOpen?: boo
         )}
       </div>
       <p className="muted" style={{ marginTop: 4 }}>
-        Anotá lo que pasó hoy (vacuna, tratamiento, muerte, nacimiento…) sobre un animal existente o
-        uno nuevo si nació.
+        Anotá lo que pasó hoy (nacimiento, muerte, tratamiento…) sobre un animal existente o uno
+        nuevo si nació.
       </p>
 
       {/* Selector de acción */}
@@ -336,40 +341,68 @@ export default function FieldRecorder({ alwaysOpen = false }: { alwaysOpen?: boo
         </>
       )}
 
-      {/* Campos por acción */}
-      {isHealth && (
-        <div className="row2">
-          <div>
-            <label>Medicamento {action === 'TREATMENT' ? '*' : ''}</label>
-            <input
-              value={medication}
-              onChange={(e) => setMedication(e.target.value)}
-              placeholder="Ivermectina"
-            />
-          </div>
-          <div>
-            <label>Carencia (días)</label>
-            <input
-              type="number"
-              inputMode="numeric"
-              value={withdrawalDays}
-              onChange={(e) => setWithdrawalDays(e.target.value)}
-            />
-          </div>
-        </div>
-      )}
-
-      {action === 'WEIGHT' && (
+      {/* Tratamiento: primero se elige el tipo (vacuna, antiparasitario, droga, pesaje) */}
+      {action === 'TREATMENT' && (
         <>
-          <label>Peso (kg) *</label>
-          <input
-            type="number"
-            inputMode="decimal"
-            step="0.1"
-            value={weight}
-            onChange={(e) => setWeight(e.target.value)}
-            placeholder="320"
-          />
+          <label>Tipo de tratamiento</label>
+          <div className="chip-row" style={{ marginBottom: 10 }}>
+            {TREATMENT_KINDS.map((k) => (
+              <button
+                key={k.key}
+                type="button"
+                className={`chip ${treatmentKind === k.key ? 'chip-active' : ''}`}
+                onClick={() => setTreatmentKind(k.key)}
+              >
+                {k.label}
+              </button>
+            ))}
+          </div>
+
+          {treatmentKind === 'WEIGHT' ? (
+            <>
+              <label>Peso (kg) *</label>
+              <input
+                type="number"
+                inputMode="decimal"
+                step="0.1"
+                value={weight}
+                onChange={(e) => setWeight(e.target.value)}
+                placeholder="320"
+              />
+            </>
+          ) : (
+            <div className="row2">
+              <div>
+                <label>
+                  {treatmentKind === 'VACCINATION'
+                    ? 'Vacuna'
+                    : treatmentKind === 'DEWORMING'
+                      ? 'Producto'
+                      : 'Droga / medicamento *'}
+                </label>
+                <input
+                  value={medication}
+                  onChange={(e) => setMedication(e.target.value)}
+                  placeholder={
+                    treatmentKind === 'VACCINATION'
+                      ? 'Aftosa, Mancha…'
+                      : treatmentKind === 'DEWORMING'
+                        ? 'Ivermectina'
+                        : 'Antibiótico…'
+                  }
+                />
+              </div>
+              <div>
+                <label>Carencia (días)</label>
+                <input
+                  type="number"
+                  inputMode="numeric"
+                  value={withdrawalDays}
+                  onChange={(e) => setWithdrawalDays(e.target.value)}
+                />
+              </div>
+            </div>
+          )}
         </>
       )}
 

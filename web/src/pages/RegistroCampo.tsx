@@ -14,7 +14,7 @@ export default function RegistroCampo() {
         ← Volver
       </button>
       <div className="section-title" style={{ marginTop: 8 }}>
-        <h2>Trabajo en el campo</h2>
+        <h2>Nuevo Registro</h2>
       </div>
       <FieldRecorder alwaysOpen />
     </div>

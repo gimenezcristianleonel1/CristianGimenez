@@ -66,9 +66,9 @@ export default function Layout() {
       </main>
 
       {pathname !== '/campo' && (
-        <Link to="/campo" className="fab" aria-label="Registrar trabajo en el campo">
-          <Icon name="plus" size={28} />
-          <span className="fab-label">Campo</span>
+        <Link to="/campo" className="fab" aria-label="Nuevo registro de campo">
+          <Icon name="plus" size={26} />
+          <span className="fab-label">Nuevo Registro</span>
         </Link>
       )}
 
