@@ -887,3 +887,31 @@ a.link {
   border-radius: 8px;
   background: #fafbf8;
 }
+
+/* ===== Botón flotante (FAB): registrar trabajo en el campo ===== */
+.fab {
+  position: fixed;
+  z-index: 40;
+  bottom: calc(74px + env(safe-area-inset-bottom));
+  /* Alineado al borde derecho de la columna centrada (máx. 760px). */
+  right: max(16px, calc(50% - 380px + 16px));
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 18px 12px 14px;
+  background: var(--brand);
+  color: #fff;
+  border-radius: 999px;
+  text-decoration: none;
+  font-weight: 700;
+  font-size: 0.95rem;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.28);
+  border: 1px solid var(--brand-dark);
+}
+.fab:active {
+  transform: translateY(1px);
+  background: var(--brand-dark);
+}
+.fab-label {
+  line-height: 1;
+}

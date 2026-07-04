@@ -1,4 +1,4 @@
-import { NavLink, Outlet, Link } from 'react-router-dom';
+import { NavLink, Outlet, Link, useLocation } from 'react-router-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../db/db';
 import { useSync } from '../sync/SyncProvider';
@@ -10,6 +10,7 @@ import { useTaskReminders } from '../lib/useTaskReminders';
 export default function Layout() {
   const { online, syncing, sync, lastSyncAt } = useSync();
   const { user, establishment, logout } = useAuth();
+  const { pathname } = useLocation();
   const pending = useLiveQuery(() => db.outbox.count(), [], 0);
   const conflicts = useLiveQuery(() => db.conflicts.count(), [], 0);
   const tasks = useLiveQuery(() => db.tasks.toArray(), [], []);
@@ -63,6 +64,13 @@ export default function Layout() {
       <main className="content">
         <Outlet />
       </main>
+
+      {pathname !== '/campo' && (
+        <Link to="/campo" className="fab" aria-label="Registrar trabajo en el campo">
+          <Icon name="plus" size={28} />
+          <span className="fab-label">Campo</span>
+        </Link>
+      )}
 
       <nav className="bottomnav">
         <NavLink to="/" end className={({ isActive }) => (isActive ? 'active' : '')}>
