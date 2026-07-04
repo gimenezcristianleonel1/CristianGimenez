@@ -10,27 +10,51 @@ export interface VisionRow {
   birthDate?: string | null;
   entryDate?: string | null;
   initialWeightKg?: number | string | null;
+  category?: string | null;
+  observations?: string | null;
 }
 
 const PROMPT = `
-Extraé de la imagen un listado de animales de ganado. Puede ser una foto de una
-planilla, un cuaderno de campo, una lista impresa o manuscrita.
+Sos un asistente experto en GANADERÍA argentina/rioplatense. Extraé de la imagen
+un listado de animales. Puede ser una foto de una planilla Excel impresa, un
+cuaderno de campo, una lista a mano o una hoja de rodeo. La foto puede estar
+POCO NÍTIDA, torcida, con reflejos, sombras o letra manuscrita: hacé tu mejor
+esfuerzo por leer igual, sin inventar datos que no puedas distinguir.
+
 Respondé SOLO un objeto JSON { "rows": Row[] }, sin markdown ni \`\`\`.
 Cada Row:
 {
-  "tagId": string|null,          // caravana / arete / RP (número o código)
-  "species": string|null,        // ej "bovino", "vacuno", "ovino"
-  "breed": string|null,          // raza
+  "tagId": string|null,          // CARAVANA / arete / RP / chapeta: el número o código que identifica al animal
+  "species": string|null,        // ej "bovino", "vacuno", "ovino", "porcino"
+  "breed": string|null,          // raza (Angus, Hereford, Braford, Brangus, cruza, etc.)
   "sex": string|null,            // "macho"/"hembra"/"M"/"H"
-  "birthDate": string|null,      // fecha de NACIMIENTO si aparece (formato original)
-  "entryDate": string|null,      // fecha de INGRESO/ingreso/entrada/compra/destete si aparece
-  "initialWeightKg": number|null // peso en kg si aparece (ej. "P. INGRESO", "peso")
+  "birthDate": string|null,      // fecha de NACIMIENTO si aparece (formato original tal cual)
+  "entryDate": string|null,      // fecha de INGRESO/entrada/compra/destete si aparece
+  "initialWeightKg": number|null,// peso en kg si aparece (ej. "P. INGRESO", "peso")
+  "category": string|null,       // CATEGORÍA ganadera (ver glosario)
+  "observations": string|null    // TODO otro dato de la fila que no encaje arriba (estado corporal, dientes, tacto, dueño, potrero, etc.)
 }
+
+GLOSARIO (categorías de bovinos, Argentina):
+- Ternero/Ternera: cría al pie de la madre, hasta el destete (~6-9 meses).
+- Vaquillona: hembra destetada que aún no parió (hasta 1ª parición / 2-3 años).
+- Vaca: hembra que ya parió al menos una vez. "Vaca con cría/al pie" = con ternero.
+- Novillito: macho castrado joven (hasta ~2 años / 4 dientes).
+- Novillo: macho castrado adulto.
+- Toro/Torito: macho entero (reproductor).
+- MEJ: macho entero joven.
+Términos: "caravana" = identificación del animal; "nacimiento" = fecha en que nació;
+"destete" = separación de la madre; "tacto/preñez" = diagnóstico reproductivo;
+"boca/dientes" = cronometría dentaria (edad); "estado corporal" = condición física.
+
 Reglas:
-- Una fila por animal. Si un dato no está, poné null (NO inventes).
-- Devolvé TODAS las filas visibles, aunque falten columnas.
-- En "tagId" va solo el identificador de la caravana.
+- Una fila por animal. Si un dato no está o no lo podés leer con seguridad, poné null (NO inventes).
+- Devolvé TODAS las filas visibles, aunque falten columnas o la imagen esté borrosa.
+- En "tagId" va SOLO el identificador de la caravana (sin "n°" ni texto extra).
 - OJO: una columna "F. INGRESO"/"Fecha ingreso" es entryDate, NO birthDate.
+- Cualquier columna/dato que no tenga un campo propio (dueño, potrero, lote,
+  estado corporal, dientes, resultado de tacto, notas) va COMPLETO en "observations"
+  con su etiqueta, para no perder información.
 `;
 
 /**

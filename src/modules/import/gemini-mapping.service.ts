@@ -9,7 +9,7 @@ import { APP_FIELDS, AppField } from './header-matching';
  * (devuelve {}) si no hay API key o si la IA falla: el llamador cae al matcher local.
  */
 const SYSTEM_PROMPT = `
-Mapeás los encabezados de una planilla ganadera a los campos de un sistema.
+Mapeás los encabezados de una planilla GANADERA (Argentina) a los campos de un sistema.
 Campos destino y sinónimos habituales:
 - tagId: caravana, arete, rp, id, numero, nro, identificacion, chapeta, crotal, tag.
 - species: especie, tipo, tipo animal.
@@ -18,12 +18,16 @@ Campos destino y sinónimos habituales:
 - birthDate: fecha de nacimiento, nacimiento, f_nac, fnac, nac, dob.
 - entryDate: fecha de ingreso, f ingreso, ingreso, entrada, fecha de compra, alta.
 - initialWeightKg: peso, peso inicial, kg, kilos, pesaje, weight, p ingreso, peso de ingreso.
+- category: categoria, categorias, clase, rodeo (vaca, vaquillona, ternero, novillo, toro...).
+- observations: observacion, observaciones, obs, detalle, nota, caracteristicas, estado corporal, dientes, tacto, comentarios, y CUALQUIER columna descriptiva sin campo propio.
 
 Ojo: "F. INGRESO" (fecha) es entryDate; "P. INGRESO" (peso) es initialWeightKg.
+Si hay VARIAS columnas descriptivas sin campo propio, elegí para "observations" la
+más representativa (ej. "OBSERVACIÓN"); el resto lo junta el sistema aparte.
 Te paso la lista EXACTA de columnas del archivo. Respondé SOLO un JSON plano:
 { "tagId": <columna>|null, "species": <columna>|null, "breed": <columna>|null,
   "sex": <columna>|null, "birthDate": <columna>|null, "entryDate": <columna>|null,
-  "initialWeightKg": <columna>|null }
+  "initialWeightKg": <columna>|null, "category": <columna>|null, "observations": <columna>|null }
 Reglas:
 - El valor debe ser el nombre EXACTO de una columna de la lista, o null si ninguna aplica.
 - No inventes columnas ni uses nombres que no estén en la lista.

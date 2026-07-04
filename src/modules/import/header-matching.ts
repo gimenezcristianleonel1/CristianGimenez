@@ -8,7 +8,9 @@ export type AppField =
   | 'sex'
   | 'birthDate'
   | 'entryDate'
-  | 'initialWeightKg';
+  | 'initialWeightKg'
+  | 'category'
+  | 'observations';
 
 export const APP_FIELDS: AppField[] = [
   'tagId',
@@ -18,6 +20,8 @@ export const APP_FIELDS: AppField[] = [
   'birthDate',
   'entryDate',
   'initialWeightKg',
+  'category',
+  'observations',
 ];
 
 /** El único campo imprescindible para poder importar una fila. */
@@ -32,6 +36,8 @@ export const FIELD_LABELS: Record<AppField, string> = {
   birthDate: 'Fecha de nacimiento',
   entryDate: 'Fecha de ingreso',
   initialWeightKg: 'Peso inicial (kg)',
+  category: 'Categoría',
+  observations: 'Observaciones',
 };
 
 /** Sinónimos (ya normalizados) por campo — el corazón del fuzzy matching. */
@@ -88,6 +94,30 @@ const FIELD_SYNONYMS: Record<AppField, string[]> = {
     'kilos',
     'weight',
     'kg',
+  ],
+  category: [
+    'categoria',
+    'categorias',
+    'categoria animal',
+    'clase',
+    'tipo de animal',
+    'rodeo',
+  ],
+  observations: [
+    'observacion',
+    'observaciones',
+    'obs',
+    'observ',
+    'detalle',
+    'detalles',
+    'comentario',
+    'comentarios',
+    'nota',
+    'notas',
+    'caracteristicas',
+    'caracteristica',
+    'estado',
+    'estado corporal',
   ],
 };
 
@@ -174,4 +204,28 @@ export function normalizeSex(value: unknown): Sex {
   if (/(macho|toro|novillo|padre|^m$|male|masculino)/.test(v)) return Sex.MALE;
   if (/(hembra|vaca|vaquillona|madre|^h$|^f$|female|femenino)/.test(v)) return Sex.FEMALE;
   return Sex.FEMALE;
+}
+
+/**
+ * Normaliza el texto libre de "categoría" (ej. "VACA C/CRIA", "Vaquillona",
+ * "Novillito", "Torito") a nuestra categoría canónica (CowCategory del frontend:
+ * src/lib/ev.ts). Devuelve null si no se reconoce, para no fijar una categoría
+ * incorrecta (el clasificador por edad/boqueo/eventos toma el control).
+ */
+export function normalizeCategory(value: unknown): string | null {
+  const v = normalizeHeader(String(value ?? ''));
+  if (!v) return null;
+  // Orden importa: lo más específico primero.
+  if (/vaquillona|vaquilla/.test(v)) return 'VAQUILLONA';
+  if (/novillito/.test(v)) return 'NOVILLITO';
+  if (/novillo/.test(v)) return 'NOVILLO';
+  if (/torito|toro|reproductor|padre/.test(v)) return 'TORO';
+  if (/mej|macho entero/.test(v)) return 'NOVILLO';
+  if (/vaca/.test(v)) {
+    // "vaca con cría / al pie / parida" ⇒ vaca con ternero al pie (1.00 EV).
+    if (/ternero|cria|pie|parida|con cria|c cria|lactancia/.test(v)) return 'VACA_CON_TERNERO';
+    return 'VACA_SECA';
+  }
+  if (/ternero|ternera|terner/.test(v)) return 'TERNERO';
+  return null;
 }

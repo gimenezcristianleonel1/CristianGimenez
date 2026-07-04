@@ -15,6 +15,7 @@ import {
   FIELD_LABELS,
   hasRequiredFields,
   matchHeaders,
+  normalizeCategory,
   normalizeSex,
   normalizeSpecies,
   signatureOf,
@@ -54,6 +55,10 @@ export interface ExtractedRow {
   birthDate: string; // yyyy-mm-dd ('' si no se detectó)
   entryDate: string; // yyyy-mm-dd ('' si no se detectó)
   initialWeightKg: number | null;
+  /** Categoría canónica (VACA_SECA, VAQUILLONA, TERNERO, ...) o '' si no se reconoció. */
+  category: string;
+  /** Texto libre: observaciones + todo dato de columnas no mapeadas (no se pierde nada). */
+  observations: string;
   /** Campos que la IA/planilla no supo con certeza (para resaltar en la tabla). */
   issues: AppField[];
 }
@@ -73,6 +78,8 @@ export interface ImportRowInput {
   birthDate?: string;
   entryDate?: string;
   initialWeightKg?: string | number | null;
+  category?: string;
+  observations?: string;
 }
 
 @Injectable()
@@ -193,6 +200,14 @@ export class ImportService {
     const breedRaw = String(get('breed') ?? '').trim();
     const weight = this.parseNumber(get('initialWeightKg'));
     const birth = this.parseDate(get('birthDate'));
+    const entry = this.parseDate(get('entryDate'));
+    const category = normalizeCategory(get('category'));
+    let observations = this.buildObservations(row, mapping, get('observations'));
+    // Categoría escrita pero no reconocida ⇒ la conservamos como texto.
+    const rawCategory = String(get('category') ?? '').trim();
+    if (rawCategory && !category) {
+      observations = (observations ? `Categoría: ${rawCategory}. ${observations}` : `Categoría: ${rawCategory}`).slice(0, 2000);
+    }
 
     return {
       tagId,
@@ -200,9 +215,38 @@ export class ImportService {
       breed: breedRaw || 'Sin especificar',
       sex: mapping.sex ? normalizeSex(get('sex')) : Sex.FEMALE,
       birthDate: (birth ?? new Date()).toISOString(),
+      ...(entry ? { entryDate: entry.toISOString() } : {}),
       initialWeightKg: weight && weight > 0 ? weight : 1,
+      ...(observations ? { observations } : {}),
+      ...(category ? { metadata: { category } } : {}),
       ...(locationId ? { currentLocationId: locationId } : {}),
     };
+  }
+
+  /**
+   * Reúne el texto de observaciones: la columna "observaciones" explícita MÁS
+   * todo lo que quede en columnas no mapeadas (para no perder ningún dato del
+   * archivo). La preservación de la categoría no reconocida la hace el llamador.
+   */
+  private buildObservations(
+    row: Record<string, unknown>,
+    mapping: Partial<Record<AppField, string>>,
+    explicit: unknown,
+  ): string {
+    const mappedHeaders = new Set(Object.values(mapping));
+    const parts: string[] = [];
+
+    const explicitStr = explicit == null ? '' : String(explicit).trim();
+    if (explicitStr) parts.push(explicitStr);
+
+    // Catch-all: columnas sin mapear.
+    for (const [header, value] of Object.entries(row)) {
+      if (mappedHeaders.has(header)) continue;
+      const s = value == null ? '' : String(value).trim();
+      if (s) parts.push(`${header}: ${s}`);
+    }
+
+    return parts.join('. ').slice(0, 2000);
   }
 
   private buildRequiresMapping(
@@ -368,6 +412,14 @@ export class ImportService {
     const weight = this.parseNumber(v.initialWeightKg);
     if (weight == null || weight <= 0) issues.push('initialWeightKg');
 
+    const category = normalizeCategory(v.category);
+    let observations = v.observations == null ? '' : String(v.observations).trim();
+    // Categoría escrita pero no reconocida ⇒ no la perdemos.
+    if (!category && has(v.category)) {
+      const raw = String(v.category).trim();
+      observations = observations ? `Categoría: ${raw}. ${observations}` : `Categoría: ${raw}`;
+    }
+
     return {
       tagId,
       species: has(v.species) ? normalizeSpecies(v.species) : Species.BOVINE,
@@ -376,6 +428,8 @@ export class ImportService {
       birthDate: birth ? birth.toISOString().slice(0, 10) : '',
       entryDate: entry ? entry.toISOString().slice(0, 10) : '',
       initialWeightKg: weight != null && weight > 0 ? weight : null,
+      category: category ?? '',
+      observations: observations.slice(0, 2000),
       issues,
     };
   }
@@ -389,6 +443,8 @@ export class ImportService {
       const header = mapping[field];
       return header ? row[header] : undefined;
     };
+    // Catch-all: la columna de observaciones + todo lo no mapeado (no se pierde nada).
+    const observations = this.buildObservations(row, mapping, get('observations'));
     return this.normalizeExtractedRow({
       tagId: get('tagId') as string,
       species: get('species') as string,
@@ -397,6 +453,8 @@ export class ImportService {
       birthDate: get('birthDate') as string,
       entryDate: get('entryDate') as string,
       initialWeightKg: get('initialWeightKg') as string,
+      category: get('category') as string,
+      observations,
     });
   }
 
@@ -414,6 +472,8 @@ export class ImportService {
     const weight = this.parseNumber(row.initialWeightKg);
     const birth = this.parseDate(row.birthDate);
     const entry = this.parseDate(row.entryDate);
+    const category = normalizeCategory(row.category);
+    const observations = String(row.observations ?? '').trim().slice(0, 2000);
     return {
       tagId,
       species: row.species ? normalizeSpecies(row.species) : Species.BOVINE,
@@ -422,6 +482,8 @@ export class ImportService {
       birthDate: (birth ?? new Date()).toISOString(),
       ...(entry ? { entryDate: entry.toISOString() } : {}),
       initialWeightKg: weight && weight > 0 ? weight : 1,
+      ...(observations ? { observations } : {}),
+      ...(category ? { metadata: { category } } : {}),
       ...(locationId ? { currentLocationId: locationId } : {}),
     };
   }
@@ -460,14 +522,19 @@ export class ImportService {
     const sheet = workbook.worksheets[0];
     if (!sheet) throw new BadRequestException('El archivo está vacío o no tiene datos');
 
+    // Muchas planillas reales traen un TÍTULO/banner en la fila 1 (ej. "RODEO DE
+    // CRIA - STOCK TOTAL...") y los encabezados reales recién en la fila 2 o 3.
+    // Detectamos automáticamente cuál es la fila de encabezados.
+    const headerRowIndex = this.findHeaderRow(sheet);
+
     const headers: string[] = [];
-    sheet.getRow(1).eachCell((cell, col) => {
+    sheet.getRow(headerRowIndex).eachCell((cell, col) => {
       headers[col] = String(this.cellValue(cell.value) ?? '').trim();
     });
 
     const rows: Array<Record<string, unknown>> = [];
-    const lastRow = Math.min(sheet.rowCount, MAX_ROWS + 1);
-    for (let r = 2; r <= lastRow; r++) {
+    const lastRow = Math.min(sheet.rowCount, headerRowIndex + MAX_ROWS);
+    for (let r = headerRowIndex + 1; r <= lastRow; r++) {
       const excelRow = sheet.getRow(r);
       const obj: Record<string, unknown> = {};
       let hasValue = false;
@@ -481,6 +548,35 @@ export class ImportService {
     }
 
     return { headers: headers.filter((h) => h && h.length > 0), rows };
+  }
+
+  /**
+   * Encuentra la fila que mejor funciona como ENCABEZADOS. Recorre las primeras
+   * filas y puntúa cada una por: (a) cuántos campos conocidos reconoce el matcher
+   * (peso alto) y (b) cuántas celdas no vacías tiene (desempate). Así saltea
+   * títulos/banners (una sola celda combinada, 0 campos reconocidos) y elige la
+   * fila de encabezados real aunque no esté en la primera línea.
+   */
+  private findHeaderRow(sheet: ExcelJS.Worksheet): number {
+    const maxScan = Math.min(sheet.rowCount || 1, 20);
+    let bestRow = 1;
+    let bestScore = -1;
+    for (let r = 1; r <= maxScan; r++) {
+      const cells: string[] = [];
+      sheet.getRow(r).eachCell((cell) => {
+        const v = String(this.cellValue(cell.value) ?? '').trim();
+        if (v) cells.push(v);
+      });
+      if (cells.length === 0) continue;
+      const recognized = Object.keys(matchHeaders(cells).mapping).length;
+      // Los campos reconocidos dominan; la cantidad de columnas desempata.
+      const score = recognized * 100 + cells.length;
+      if (score > bestScore) {
+        bestScore = score;
+        bestRow = r;
+      }
+    }
+    return bestRow;
   }
 
   /** Extrae un valor primitivo de una celda de ExcelJS (maneja fechas/fórmulas/rich text). */
