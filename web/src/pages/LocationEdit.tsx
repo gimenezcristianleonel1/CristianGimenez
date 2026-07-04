@@ -5,13 +5,29 @@ import { db } from '../db/db';
 import {
   bulkHealthByLocation,
   bulkMoveByLocation,
+  bulkReproEventByLocation,
+  bulkStatusByLocation,
   createAnimal,
   deleteLocation,
   updateLocation,
   type LocationEditInput,
 } from '../db/repository';
-import { healthEventLabel, locationTypeLabel, sexLabel, speciesLabel } from '../lib/labels';
-import type { Animal, HealthEventType, LocationRow, LocationType, Sex, Species } from '../lib/types';
+import {
+  healthEventLabel,
+  locationTypeLabel,
+  sexLabel,
+  speciesLabel,
+  statusLabel,
+} from '../lib/labels';
+import type {
+  Animal,
+  AnimalStatus,
+  HealthEventType,
+  LocationRow,
+  LocationType,
+  Sex,
+  Species,
+} from '../lib/types';
 
 export default function LocationEdit() {
   const { id = '' } = useParams();
@@ -338,11 +354,16 @@ function BulkPanel({
   const [eventType, setEventType] = useState<HealthEventType>('DEWORMING');
   const [medication, setMedication] = useState('');
   const [withdrawalDays, setWithdrawalDays] = useState('0');
+  const [sireTag, setSireTag] = useState('');
+  const [newStatus, setNewStatus] = useState<AnimalStatus>('READY_FOR_SALE');
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState('');
   const [err, setErr] = useState('');
 
   const needsMed = ['VACCINATION', 'DEWORMING', 'TREATMENT'].includes(eventType);
+  const femaleCount = residents.filter((a) => a.sex === 'FEMALE' && a.status === 'ACTIVE').length;
+  // Estados destino ofrecidos para el cambio masivo (los no terminales).
+  const BULK_STATUSES: AnimalStatus[] = ['ACTIVE', 'QUARANTINE', 'READY_FOR_SALE'];
 
   async function moveAll() {
     setErr('');
@@ -381,6 +402,39 @@ function BulkPanel({
       setMsg(`Evento aplicado a ${n} animal(es). Se está sincronizando…`);
       setMedication('');
       setWithdrawalDays('0');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function serviceAll() {
+    setErr('');
+    setMsg('');
+    if (femaleCount === 0) return setErr('No hay hembras activas en este potrero');
+    setBusy(true);
+    try {
+      const n = await bulkReproEventByLocation(locationId, {
+        type: 'SERVICIO',
+        sireTagId: sireTag.trim() || undefined,
+      });
+      setMsg(`${n} hembra(s) puestas en servicio. Se está sincronizando…`);
+      setSireTag('');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function statusAll() {
+    setErr('');
+    setMsg('');
+    setBusy(true);
+    try {
+      const n = await bulkStatusByLocation(locationId, newStatus);
+      setMsg(
+        n > 0
+          ? `${n} animal(es) marcados como “${statusLabel[newStatus]}”. Se está sincronizando…`
+          : `No había animales para cambiar a “${statusLabel[newStatus]}”.`,
+      );
     } finally {
       setBusy(false);
     }
@@ -433,6 +487,44 @@ function BulkPanel({
       <button className="btn btn-outline" disabled={busy} onClick={() => void treatAll()}>
         Aplicar a los {residents.length}
       </button>
+
+      {/* Poner en servicio (evento reproductivo masivo, solo hembras activas) */}
+      <label style={{ marginTop: 14 }}>Poner en servicio ({femaleCount} hembra/s)</label>
+      <div className="row2">
+        <input
+          value={sireTag}
+          onChange={(e) => setSireTag(e.target.value)}
+          placeholder="Toro / padre (caravana, opcional)"
+        />
+        <button
+          className="btn btn-outline"
+          style={{ marginTop: 0 }}
+          disabled={busy || femaleCount === 0}
+          onClick={() => void serviceAll()}
+        >
+          Poner en servicio
+        </button>
+      </div>
+
+      {/* Cambio de estado masivo */}
+      <label style={{ marginTop: 14 }}>Cambiar estado de todos a…</label>
+      <div className="row2">
+        <select value={newStatus} onChange={(e) => setNewStatus(e.target.value as AnimalStatus)}>
+          {BULK_STATUSES.map((s) => (
+            <option key={s} value={s}>
+              {statusLabel[s]}
+            </option>
+          ))}
+        </select>
+        <button
+          className="btn btn-outline"
+          style={{ marginTop: 0 }}
+          disabled={busy}
+          onClick={() => void statusAll()}
+        >
+          Aplicar estado
+        </button>
+      </div>
 
       {err && <div className="error">{err}</div>}
       {msg && <div className="ok">{msg}</div>}

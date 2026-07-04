@@ -558,9 +558,69 @@ export async function bulkHealthByLocation(
   locationId: string,
   input: NewHealthInput,
 ): Promise<number> {
-  const animals = await db.animals.where('currentLocationId').equals(locationId).toArray();
+  const animals = await db.animals
+    .where('currentLocationId')
+    .equals(locationId)
+    .and((a) => a.status !== 'SOLD' && a.status !== 'DECEASED')
+    .toArray();
   for (const a of animals) {
     await addHealth(a.id, input);
+  }
+  return animals.length;
+}
+
+export interface BulkReproEventInput {
+  type: ReproEventType;
+  sireTagId?: string;
+  observations?: string;
+  /** Solo hembras (típico para "poner en servicio"). Por defecto true. */
+  onlyFemales?: boolean;
+}
+
+/**
+ * Registra un evento reproductivo (servicio/parición/destete) a TODOS los
+ * animales activos de un potrero — p. ej. "poner el potrero en servicio".
+ * Devuelve la cantidad de animales afectados.
+ */
+export async function bulkReproEventByLocation(
+  locationId: string,
+  input: BulkReproEventInput,
+): Promise<number> {
+  const onlyFemales = input.onlyFemales ?? true;
+  const animals = await db.animals
+    .where('currentLocationId')
+    .equals(locationId)
+    .and((a) => a.status === 'ACTIVE' && (!onlyFemales || a.sex === 'FEMALE'))
+    .toArray();
+  for (const a of animals) {
+    await createReproEvent({
+      animalId: a.id,
+      type: input.type,
+      sireTagId: input.sireTagId,
+      observations: input.observations,
+    });
+  }
+  return animals.length;
+}
+
+/**
+ * Cambia el estado a TODOS los animales de un potrero (salteando los que ya
+ * están en ese estado o son terminales: vendidos/fallecidos). Devuelve la
+ * cantidad efectivamente modificada.
+ */
+export async function bulkStatusByLocation(
+  locationId: string,
+  status: AnimalStatus,
+): Promise<number> {
+  const animals = await db.animals
+    .where('currentLocationId')
+    .equals(locationId)
+    .and(
+      (a) => a.status !== status && a.status !== 'SOLD' && a.status !== 'DECEASED',
+    )
+    .toArray();
+  for (const a of animals) {
+    await changeAnimalStatus(a.id, status);
   }
   return animals.length;
 }

@@ -4,6 +4,7 @@ import { db } from '../db/db';
 import { createTask, setTaskStatus, deleteTask } from '../db/repository';
 import type { TaskRow } from '../lib/types';
 import { Icon } from '../components/Icon';
+import FieldRecorder from '../components/FieldRecorder';
 import {
   notifSupported,
   notifPermission,
@@ -107,6 +108,9 @@ export default function Planificacion() {
           vencidas.
         </div>
       )}
+
+      {/* Registro rápido de trabajo hecho en el campo (animal existente o nuevo) */}
+      <FieldRecorder />
 
       {/* Nueva tarea */}
       <form className="card" onSubmit={add}>
