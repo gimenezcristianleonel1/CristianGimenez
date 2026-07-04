@@ -3,7 +3,6 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../db/db';
 import {
   addHealth,
-  addWeight,
   changeAnimalStatus,
   createAnimal,
   createAnimalEvent,
@@ -13,24 +12,22 @@ import { sexLabel, speciesLabel } from '../lib/labels';
 import type { Animal, Sex, Species } from '../lib/types';
 
 /** Acciones que se registran a diario en el campo (en orden de aparición). */
-type FieldAction = 'BIRTH' | 'DEATH' | 'TREATMENT' | 'SERVICE' | 'NOTE';
+type FieldAction = 'BIRTH' | 'DEATH' | 'TREATMENT' | 'NOTE';
 
 const ACTIONS: Array<{ key: FieldAction; label: string }> = [
   { key: 'BIRTH', label: 'Nacimiento' },
   { key: 'DEATH', label: 'Muerte' },
   { key: 'TREATMENT', label: 'Tratamiento' },
-  { key: 'SERVICE', label: 'Servicio' },
   { key: 'NOTE', label: 'Nota' },
 ];
 
 /** Sub-tipos que despliega "Tratamiento". */
-type TreatmentKind = 'VACCINATION' | 'DEWORMING' | 'MEDICATION' | 'WEIGHT';
+type TreatmentKind = 'VACCINATION' | 'DEWORMING' | 'MEDICATION';
 
 const TREATMENT_KINDS: Array<{ key: TreatmentKind; label: string }> = [
   { key: 'VACCINATION', label: 'Vacuna' },
   { key: 'DEWORMING', label: 'Antiparasitario' },
   { key: 'MEDICATION', label: 'Otra droga / tratamiento' },
-  { key: 'WEIGHT', label: 'Pesaje' },
 ];
 const todayStr = () => new Date().toISOString().slice(0, 10);
 /**
@@ -140,12 +137,10 @@ export default function FieldRecorder({ alwaysOpen = false }: { alwaysOpen?: boo
   // Animal objetivo (acciones sobre existente).
   const [animal, setAnimal] = useState<Animal | null>(null);
 
-  // Campos específicos de sanidad / pesaje / nota / servicio.
+  // Campos específicos de sanidad / nota.
   const [medication, setMedication] = useState('');
   const [withdrawalDays, setWithdrawalDays] = useState('0');
-  const [weight, setWeight] = useState('');
   const [note, setNote] = useState('');
-  const [sireTagId, setSireTagId] = useState('');
 
   // Campos de "Nacimiento" (alta de un animal nuevo).
   const [tagId, setTagId] = useState('');
@@ -172,9 +167,7 @@ export default function FieldRecorder({ alwaysOpen = false }: { alwaysOpen?: boo
     setAnimal(null);
     setMedication('');
     setWithdrawalDays('0');
-    setWeight('');
     setNote('');
-    setSireTagId('');
     setTagId('');
     setBreed('');
     setBirthWeight('');
@@ -237,42 +230,24 @@ export default function FieldRecorder({ alwaysOpen = false }: { alwaysOpen?: boo
     setBusy(true);
     try {
       if (action === 'TREATMENT') {
-        if (treatmentKind === 'WEIGHT') {
-          const w = Number(weight);
-          if (!(w > 0)) {
-            setBusy(false);
-            return setError('El peso debe ser mayor a 0');
-          }
-          await addWeight(animal.id, { weightKg: w, measuredAt: iso });
-          setMsg(`Pesaje de ${w} kg registrado en ${animal.tagId}.`);
-        } else {
-          if (treatmentKind === 'MEDICATION' && !medication.trim()) {
-            setBusy(false);
-            return setError('Indicá la droga / medicamento del tratamiento');
-          }
-          const eventType =
-            treatmentKind === 'VACCINATION'
-              ? 'VACCINATION'
-              : treatmentKind === 'DEWORMING'
-                ? 'DEWORMING'
-                : 'TREATMENT';
-          await addHealth(animal.id, {
-            eventType,
-            medication: medication.trim() || undefined,
-            withdrawalDays: Number(withdrawalDays) || 0,
-            appliedAt: iso,
-          });
-          const kindLabel = TREATMENT_KINDS.find((k) => k.key === treatmentKind)?.label ?? 'Tratamiento';
-          setMsg(`${kindLabel} registrado en ${animal.tagId}.`);
+        if (treatmentKind === 'MEDICATION' && !medication.trim()) {
+          setBusy(false);
+          return setError('Indicá la droga / medicamento del tratamiento');
         }
-      } else if (action === 'SERVICE') {
-        await createReproEvent({
-          animalId: animal.id,
-          type: 'SERVICIO',
-          sireTagId: sireTagId.trim() || undefined,
-          date: iso,
+        const eventType =
+          treatmentKind === 'VACCINATION'
+            ? 'VACCINATION'
+            : treatmentKind === 'DEWORMING'
+              ? 'DEWORMING'
+              : 'TREATMENT';
+        await addHealth(animal.id, {
+          eventType,
+          medication: medication.trim() || undefined,
+          withdrawalDays: Number(withdrawalDays) || 0,
+          appliedAt: iso,
         });
-        setMsg(`Servicio registrado en ${animal.tagId}.`);
+        const kindLabel = TREATMENT_KINDS.find((k) => k.key === treatmentKind)?.label ?? 'Tratamiento';
+        setMsg(`${kindLabel} registrado en ${animal.tagId}.`);
       } else if (action === 'NOTE') {
         if (!note.trim()) {
           setBusy(false);
@@ -341,7 +316,7 @@ export default function FieldRecorder({ alwaysOpen = false }: { alwaysOpen?: boo
         </>
       )}
 
-      {/* Tratamiento: primero se elige el tipo (vacuna, antiparasitario, droga, pesaje) */}
+      {/* Tratamiento: primero se elige el tipo (vacuna, antiparasitario, droga) */}
       {action === 'TREATMENT' && (
         <>
           <label>Tipo de tratamiento</label>
@@ -358,58 +333,37 @@ export default function FieldRecorder({ alwaysOpen = false }: { alwaysOpen?: boo
             ))}
           </div>
 
-          {treatmentKind === 'WEIGHT' ? (
-            <>
-              <label>Peso (kg) *</label>
+          <div className="row2">
+            <div>
+              <label>
+                {treatmentKind === 'VACCINATION'
+                  ? 'Vacuna'
+                  : treatmentKind === 'DEWORMING'
+                    ? 'Producto'
+                    : 'Droga / medicamento *'}
+              </label>
+              <input
+                value={medication}
+                onChange={(e) => setMedication(e.target.value)}
+                placeholder={
+                  treatmentKind === 'VACCINATION'
+                    ? 'Aftosa, Mancha…'
+                    : treatmentKind === 'DEWORMING'
+                      ? 'Ivermectina'
+                      : 'Antibiótico…'
+                }
+              />
+            </div>
+            <div>
+              <label>Carencia (días)</label>
               <input
                 type="number"
-                inputMode="decimal"
-                step="0.1"
-                value={weight}
-                onChange={(e) => setWeight(e.target.value)}
-                placeholder="320"
+                inputMode="numeric"
+                value={withdrawalDays}
+                onChange={(e) => setWithdrawalDays(e.target.value)}
               />
-            </>
-          ) : (
-            <div className="row2">
-              <div>
-                <label>
-                  {treatmentKind === 'VACCINATION'
-                    ? 'Vacuna'
-                    : treatmentKind === 'DEWORMING'
-                      ? 'Producto'
-                      : 'Droga / medicamento *'}
-                </label>
-                <input
-                  value={medication}
-                  onChange={(e) => setMedication(e.target.value)}
-                  placeholder={
-                    treatmentKind === 'VACCINATION'
-                      ? 'Aftosa, Mancha…'
-                      : treatmentKind === 'DEWORMING'
-                        ? 'Ivermectina'
-                        : 'Antibiótico…'
-                  }
-                />
-              </div>
-              <div>
-                <label>Carencia (días)</label>
-                <input
-                  type="number"
-                  inputMode="numeric"
-                  value={withdrawalDays}
-                  onChange={(e) => setWithdrawalDays(e.target.value)}
-                />
-              </div>
             </div>
-          )}
-        </>
-      )}
-
-      {action === 'SERVICE' && (
-        <>
-          <label>Toro / padre (caravana, opcional)</label>
-          <input value={sireTagId} onChange={(e) => setSireTagId(e.target.value)} placeholder="T-01" />
+          </div>
         </>
       )}
 
@@ -489,7 +443,9 @@ export default function FieldRecorder({ alwaysOpen = false }: { alwaysOpen?: boo
         </>
       )}
 
-      <label style={{ marginTop: 10 }}>Fecha</label>
+      <label style={{ marginTop: 10 }}>
+        {action === 'BIRTH' ? 'Fecha de nacimiento' : 'Fecha'}
+      </label>
       <input type="date" max={todayStr()} value={date} onChange={(e) => setDate(e.target.value)} />
 
       {error && <div className="error">{error}</div>}
