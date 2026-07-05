@@ -29,6 +29,11 @@ export interface AppConfig {
     apiKey: string;
     model: string;
   };
+  push: {
+    vapidPublicKey: string;
+    vapidPrivateKey: string;
+    vapidSubject: string;
+  };
 }
 
 export default (): AppConfig => ({
@@ -57,5 +62,10 @@ export default (): AppConfig => ({
   gemini: {
     apiKey: process.env.GEMINI_API_KEY ?? '',
     model: process.env.GEMINI_MODEL ?? 'gemini-2.0-flash',
+  },
+  push: {
+    vapidPublicKey: process.env.VAPID_PUBLIC_KEY ?? '',
+    vapidPrivateKey: process.env.VAPID_PRIVATE_KEY ?? '',
+    vapidSubject: process.env.VAPID_SUBJECT ?? 'mailto:soporte@ganaderia.app',
   },
 });

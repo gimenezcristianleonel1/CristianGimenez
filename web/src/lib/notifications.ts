@@ -1,3 +1,4 @@
+import { api } from '../api/client';
 import type { TaskRow } from './types';
 
 /**
@@ -43,6 +44,64 @@ export async function requestNotifPermission(): Promise<NotificationPermission> 
     return await Notification.requestPermission();
   } catch {
     return Notification.permission;
+  }
+}
+
+// ---------------------------------------------------------------- Web Push
+//
+// Avisos que llegan aunque la app esté cerrada: el navegador se suscribe con la
+// clave pública VAPID del backend y este envía los recordatorios desde el server.
+
+function urlBase64ToUint8Array(base64String: string): Uint8Array<ArrayBuffer> {
+  const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
+  const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+  const raw = atob(base64);
+  const buffer = new ArrayBuffer(raw.length);
+  const out = new Uint8Array(buffer);
+  for (let i = 0; i < raw.length; i++) out[i] = raw.charCodeAt(i);
+  return out;
+}
+
+function pushSupported(): boolean {
+  return notifSupported() && 'PushManager' in window;
+}
+
+/**
+ * Suscribe este navegador a Web Push y registra la suscripción en el backend.
+ * Idempotente: si ya estaba suscripto, reenvía la suscripción (por si el server
+ * la perdió). Silencioso: devuelve false si no se pudo (sin romper la app).
+ */
+export async function subscribeToPush(): Promise<boolean> {
+  if (!pushSupported() || Notification.permission !== 'granted') return false;
+
+  let reg: ServiceWorkerRegistration;
+  try {
+    reg = await navigator.serviceWorker.ready;
+  } catch {
+    return false;
+  }
+
+  try {
+    const info = await api<{ publicKey: string; enabled: boolean }>('/notifications/vapid-key');
+    if (!info?.publicKey) return false; // backend sin claves VAPID configuradas
+
+    let sub = await reg.pushManager.getSubscription();
+    if (!sub) {
+      sub = await reg.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: urlBase64ToUint8Array(info.publicKey),
+      });
+    }
+    const json = sub.toJSON() as { endpoint?: string; keys?: { p256dh?: string; auth?: string } };
+    if (!json.endpoint || !json.keys?.p256dh || !json.keys?.auth) return false;
+
+    await api('/notifications/subscribe', {
+      method: 'POST',
+      body: { endpoint: json.endpoint, keys: { p256dh: json.keys.p256dh, auth: json.keys.auth } },
+    });
+    return true;
+  } catch {
+    return false;
   }
 }
 

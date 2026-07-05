@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../db/db';
-import { notifPermission, syncTaskReminders } from './notifications';
+import { notifPermission, subscribeToPush, syncTaskReminders } from './notifications';
 
 const RECHECK_MS = 5 * 60_000;
 
@@ -12,6 +12,12 @@ const RECHECK_MS = 5 * 60_000;
  */
 export function useTaskReminders(): void {
   const tasks = useLiveQuery(() => db.tasks.toArray(), [], []);
+
+  // Asegura la suscripción Web Push (avisos con la app cerrada) al iniciar,
+  // si el usuario ya concedió permiso. Idempotente y silencioso.
+  useEffect(() => {
+    if (notifPermission() === 'granted') void subscribeToPush();
+  }, []);
 
   // Reprogramar / revisar cuando cambian las tareas.
   useEffect(() => {
