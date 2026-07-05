@@ -645,3 +645,67 @@ export async function bulkStatusByLocation(
   }
   return animals.length;
 }
+
+// -------- Masivo sobre una selección arbitraria de animales (por id) --------
+
+/** Elimina una lista de animales (por id). Devuelve la cantidad borrada. */
+export async function bulkDeleteAnimals(animalIds: string[]): Promise<number> {
+  for (const id of animalIds) {
+    await deleteAnimal(id);
+  }
+  return animalIds.length;
+}
+
+/** Aplica un evento sanitario a una lista de animales (por id). */
+export async function bulkHealthByAnimals(
+  animalIds: string[],
+  input: NewHealthInput,
+): Promise<number> {
+  const animals = await db.animals
+    .where('id')
+    .anyOf(animalIds)
+    .and((a) => a.status !== 'SOLD' && a.status !== 'DECEASED')
+    .toArray();
+  for (const a of animals) {
+    await addHealth(a.id, input);
+  }
+  return animals.length;
+}
+
+/** Cambia el estado de una lista de animales (saltea terminales y los que ya están). */
+export async function bulkStatusByAnimals(
+  animalIds: string[],
+  status: AnimalStatus,
+): Promise<number> {
+  const animals = await db.animals
+    .where('id')
+    .anyOf(animalIds)
+    .and((a) => a.status !== status && a.status !== 'SOLD' && a.status !== 'DECEASED')
+    .toArray();
+  for (const a of animals) {
+    await changeAnimalStatus(a.id, status);
+  }
+  return animals.length;
+}
+
+/** Registra un evento reproductivo a una lista de animales (por id). */
+export async function bulkReproEventByAnimals(
+  animalIds: string[],
+  input: BulkReproEventInput,
+): Promise<number> {
+  const onlyFemales = input.onlyFemales ?? true;
+  const animals = await db.animals
+    .where('id')
+    .anyOf(animalIds)
+    .and((a) => a.status === 'ACTIVE' && (!onlyFemales || a.sex === 'FEMALE'))
+    .toArray();
+  for (const a of animals) {
+    await createReproEvent({
+      animalId: a.id,
+      type: input.type,
+      sireTagId: input.sireTagId,
+      observations: input.observations,
+    });
+  }
+  return animals.length;
+}

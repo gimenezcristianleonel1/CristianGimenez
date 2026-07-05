@@ -915,3 +915,32 @@ a.link {
 .fab-label {
   line-height: 1;
 }
+
+/* ===== Selección múltiple de animales (mantener apretado) ===== */
+.select-bar {
+  position: sticky;
+  top: 0;
+  z-index: 30;
+  background: var(--card);
+  border: 1px solid var(--border-strong);
+  border-radius: 10px;
+  padding: 10px 12px;
+  margin-bottom: 10px;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.12);
+}
+.select-bar-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.list-item.selectable {
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+  cursor: pointer;
+}
+.list-item.selected {
+  border-color: var(--brand);
+  background: #eef1e6;
+}
