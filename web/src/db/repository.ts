@@ -353,6 +353,27 @@ export async function createTask(input: NewTaskInput): Promise<string> {
   return id;
 }
 
+export interface TaskEditInput {
+  title?: string;
+  description?: string | null;
+  /** ISO para fijar fecha límite, o null para quitarla. */
+  dueDate?: string | null;
+}
+
+/** Edita título/fecha/descripción de una tarea (optimista) y encola el PATCH. */
+export async function updateTask(taskId: string, changes: TaskEditInput): Promise<void> {
+  await db.tasks.update(taskId, { ...changes, _dirty: 1 });
+  await enqueue({
+    id: uuid(),
+    kind: 'task.update',
+    method: 'PATCH',
+    path: `/tasks/${taskId}`,
+    body: { ...changes },
+    entityTable: 'tasks',
+    entityId: taskId,
+  });
+}
+
 /** Marca una tarea como cumplida/pendiente (optimista) y encola el PATCH. */
 export async function setTaskStatus(taskId: string, status: TaskStatus): Promise<void> {
   const completedAt = status === 'COMPLETED' ? new Date().toISOString() : null;
