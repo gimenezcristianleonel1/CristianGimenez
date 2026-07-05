@@ -1,10 +1,9 @@
 import { useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../db/db';
-import { createTask, setTaskStatus, deleteTask } from '../db/repository';
+import { createTask, setTaskStatus, deleteTask, updateTask } from '../db/repository';
 import type { TaskRow } from '../lib/types';
 import { Icon } from '../components/Icon';
-import FieldRecorder from '../components/FieldRecorder';
 import {
   notifSupported,
   notifPermission,
@@ -22,6 +21,15 @@ function fmtDue(iso: string | null): string {
   return d.toLocaleString('es-AR', { day: '2-digit', month: '2-digit', year: '2-digit', hour: '2-digit', minute: '2-digit' });
 }
 
+/** ISO → valor para <input type="datetime-local"> (hora local, sin zona). */
+function toLocalInput(iso: string | null): string {
+  if (!iso) return '';
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return '';
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
 export default function Planificacion() {
   const tasks = useLiveQuery(() => db.tasks.toArray(), [], []);
   const [title, setTitle] = useState('');
@@ -30,6 +38,31 @@ export default function Planificacion() {
   const [error, setError] = useState('');
   const [showDone, setShowDone] = useState(false);
   const [perm, setPerm] = useState<NotificationPermission>(notifPermission());
+  // Edición de una tarea (título + fecha límite).
+  const [editId, setEditId] = useState<string | null>(null);
+  const [editTitle, setEditTitle] = useState('');
+  const [editDue, setEditDue] = useState('');
+  const [editError, setEditError] = useState('');
+
+  function startEdit(t: TaskRow) {
+    setEditId(t.id);
+    setEditTitle(t.title);
+    setEditDue(toLocalInput(t.dueDate));
+    setEditError('');
+  }
+  function cancelEdit() {
+    setEditId(null);
+    setEditError('');
+  }
+  async function saveEdit(id: string) {
+    if (!editTitle.trim()) return setEditError('El título no puede quedar vacío');
+    await updateTask(id, {
+      title: editTitle.trim(),
+      dueDate: editDue ? new Date(editDue).toISOString() : null,
+    });
+    setEditId(null);
+    setEditError('');
+  }
 
   async function enableNotifications() {
     const result = await requestNotifPermission();
@@ -112,9 +145,6 @@ export default function Planificacion() {
         </div>
       )}
 
-      {/* Registro rápido de trabajo hecho en el campo (animal existente o nuevo) */}
-      <FieldRecorder />
-
       {/* Nueva tarea */}
       <form className="card" onSubmit={add}>
         <h2>Nueva tarea</h2>
@@ -161,29 +191,58 @@ export default function Planificacion() {
             {showDone ? '▼' : '▶'} Cumplidas ({completed.length})
           </button>
           {showDone &&
-            completed.map((t) => (
-              <div key={t.id} className="task done">
-                <input
-                  type="checkbox"
-                  checked
-                  onChange={() => void setTaskStatus(t.id, 'PENDING')}
-                  aria-label="Reabrir"
-                />
-                <div className="task-body">
-                  <div className="task-title struck">{t.title}</div>
-                  <div className="sub">{fmtDue(t.completedAt)}</div>
+            completed.map((t) =>
+              editId === t.id ? (
+                <div key={t.id} className="task done" style={{ alignItems: 'stretch' }}>
+                  <div className="task-body">
+                    <label>Título *</label>
+                    <input value={editTitle} onChange={(e) => setEditTitle(e.target.value)} />
+                    <label>Fecha límite (opcional)</label>
+                    <input
+                      type="datetime-local"
+                      value={editDue}
+                      onChange={(e) => setEditDue(e.target.value)}
+                    />
+                    {editError && <div className="error">{editError}</div>}
+                    <div className="row2" style={{ marginTop: 8 }}>
+                      <button className="btn btn-outline" onClick={cancelEdit}>
+                        Cancelar
+                      </button>
+                      <button className="btn" onClick={() => void saveEdit(t.id)}>
+                        Guardar
+                      </button>
+                    </div>
+                  </div>
                 </div>
-                <button
-                  className="task-delete"
-                  aria-label="Eliminar tarea"
-                  onClick={() => {
-                    if (window.confirm(`¿Eliminar la tarea "${t.title}"?`)) void deleteTask(t.id);
-                  }}
-                >
-                  Eliminar
-                </button>
-              </div>
-            ))}
+              ) : (
+                <div key={t.id} className="task done">
+                  <input
+                    type="checkbox"
+                    checked
+                    onChange={() => void setTaskStatus(t.id, 'PENDING')}
+                    aria-label="Reabrir"
+                  />
+                  <div className="task-body">
+                    <div className="task-title struck">{t.title}</div>
+                    <div className="sub">{fmtDue(t.completedAt)}</div>
+                  </div>
+                  <div style={{ display: 'flex', gap: 6 }}>
+                    <button className="btn-link" aria-label="Modificar tarea" onClick={() => startEdit(t)}>
+                      Modificar
+                    </button>
+                    <button
+                      className="task-delete"
+                      aria-label="Eliminar tarea"
+                      onClick={() => {
+                        if (window.confirm(`¿Eliminar la tarea "${t.title}"?`)) void deleteTask(t.id);
+                      }}
+                    >
+                      Eliminar
+                    </button>
+                  </div>
+                </div>
+              ),
+            )}
         </div>
       )}
     </div>
