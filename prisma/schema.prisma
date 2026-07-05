@@ -181,6 +181,7 @@ model Establishment {
   reproductiveChecks ReproductiveCheck[]
   reproductiveEvents ReproductiveEvent[]
   animalEvents    AnimalEvent[]
+  pushSubscriptions PushSubscription[]
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
@@ -203,6 +204,9 @@ model Task {
   /// Fecha de finalización (se setea al pasar a COMPLETED).
   completedAt DateTime?  @map("completed_at")
 
+  /// Hitos de aviso ya enviados por push ("1d","3h","due"), para no repetir.
+  notifiedMilestones String[] @default([]) @map("notified_milestones")
+
   establishmentId String        @map("establishment_id") @db.Uuid
   establishment   Establishment @relation(fields: [establishmentId], references: [id], onDelete: Cascade, onUpdate: Cascade)
 
@@ -211,6 +215,25 @@ model Task {
 
   @@index([establishmentId])
   @@map("tasks")
+}
+
+/// Suscripción de un navegador a Web Push (para avisos con la app cerrada).
+model PushSubscription {
+  id       String @id @default(uuid()) @db.Uuid
+  /// Endpoint único que entrega el navegador/servicio de push.
+  endpoint String @unique
+  /// Claves de cifrado del navegador (estándar Web Push).
+  p256dh   String
+  auth     String
+
+  establishmentId String        @map("establishment_id") @db.Uuid
+  establishment   Establishment @relation(fields: [establishmentId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([establishmentId])
+  @@map("push_subscriptions")
 }
 
 // ------------------------------------------------------------

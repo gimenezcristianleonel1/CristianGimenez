@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { APP_GUARD } from '@nestjs/core';
 import { EventEmitterModule } from '@nestjs/event-emitter';
+import { ScheduleModule } from '@nestjs/schedule';
 import configuration from '@infrastructure/config/configuration';
 import { envValidationSchema } from '@infrastructure/config/env.validation';
 import { PrismaModule } from '@infrastructure/database/prisma.module';
@@ -15,6 +16,7 @@ import { HealthModule } from '@modules/health/health.module';
 import { ImportModule } from '@modules/import/import.module';
 import { LocationsModule } from '@modules/locations/locations.module';
 import { MovementsModule } from '@modules/movements/movements.module';
+import { NotificationsModule } from '@modules/notifications/notifications.module';
 import { ReportsModule } from '@modules/reports/reports.module';
 import { ReproductiveModule } from '@modules/reproductive/reproductive.module';
 import { SanitaryModule } from '@modules/sanitary/sanitary.module';
@@ -33,6 +35,9 @@ import { TasksModule } from '@modules/tasks/tasks.module';
     // In-process event bus that backs the Event-Driven Architecture.
     EventEmitterModule.forRoot({ wildcard: true, delimiter: '.' }),
 
+    // Tareas programadas (job de avisos Web Push).
+    ScheduleModule.forRoot(),
+
     // Infrastructure
     PrismaModule,
     EventsModule,
@@ -50,6 +55,7 @@ import { TasksModule } from '@modules/tasks/tasks.module';
     SanitaryModule,
     MovementsModule,
     TasksModule,
+    NotificationsModule,
     ReportsModule,
     ReproductiveModule,
   ],

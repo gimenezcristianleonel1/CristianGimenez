@@ -25,4 +25,9 @@ export const envValidationSchema = Joi.object({
 
   GEMINI_API_KEY: Joi.string().allow('').default(''),
   GEMINI_MODEL: Joi.string().default('gemini-2.0-flash'),
+
+  // Web Push (opcionales: si faltan, los avisos push quedan inactivos y el server arranca igual).
+  VAPID_PUBLIC_KEY: Joi.string().allow('').default(''),
+  VAPID_PRIVATE_KEY: Joi.string().allow('').default(''),
+  VAPID_SUBJECT: Joi.string().default('mailto:soporte@ganaderia.app'),
 });

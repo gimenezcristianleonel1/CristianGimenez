@@ -9,6 +9,7 @@ import {
   notifSupported,
   notifPermission,
   requestNotifPermission,
+  subscribeToPush,
   syncTaskReminders,
 } from '../lib/notifications';
 
@@ -36,6 +37,8 @@ export default function Planificacion() {
     if (result === 'granted') {
       // Programar los avisos de las tareas ya cargadas.
       void syncTaskReminders(await db.tasks.toArray());
+      // Suscribir el navegador a Web Push (avisos con la app cerrada).
+      void subscribeToPush();
     }
   }
 
@@ -91,7 +94,7 @@ export default function Planificacion() {
             <div className="sub">
               {perm === 'denied'
                 ? 'Los avisos están bloqueados. Activalos desde los ajustes del navegador para esta app.'
-                : 'Recibí un aviso un día antes y cuando esté por vencer cada tarea con fecha.'}
+                : 'Recibí un aviso un día antes y cuando esté por vencer cada tarea con fecha, aunque tengas la app cerrada.'}
             </div>
           </div>
           {perm === 'default' && (
