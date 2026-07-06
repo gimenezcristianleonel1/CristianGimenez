@@ -23,6 +23,11 @@ export const envValidationSchema = Joi.object({
   JWT_SECRET: Joi.string().min(16).default('dev-insecure-change-me-please-32chars'),
   JWT_EXPIRES_IN: Joi.string().default('30d'),
 
+  // Bot de WhatsApp (opcionales: si faltan, el bot queda inerte y el server arranca igual).
+  WHATSAPP_VERIFY_TOKEN: Joi.string().allow('').default(''),
+  WHATSAPP_TOKEN: Joi.string().allow('').default(''),
+  WHATSAPP_PHONE_NUMBER_ID: Joi.string().allow('').default(''),
+  WHATSAPP_ESTABLISHMENT_ID: Joi.string().allow('').default(''),
   GEMINI_API_KEY: Joi.string().allow('').default(''),
   GEMINI_MODEL: Joi.string().default('gemini-2.0-flash'),
 
