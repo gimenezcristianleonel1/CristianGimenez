@@ -1,4 +1,11 @@
-import { AnimalEventType, HealthEventType, Prisma } from '@prisma/client';
+import {
+  AnimalEventType,
+  CheckType,
+  HealthEventType,
+  PregnancyStatus,
+  Prisma,
+  ReproEventType,
+} from '@prisma/client';
 import { PrismaService } from '@infrastructure/database/prisma.service';
 
 /**
@@ -76,6 +83,13 @@ const pick = (m: Record<string, unknown>, keys: string[]): unknown => {
   }
   return null;
 };
+/** Minúsculas sin acentos, para comparar texto libre de la IA. */
+const normalize = (s: string): string =>
+  s
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .trim();
 
 // ------------------------------- Efectos ------------------------------------
 
@@ -252,6 +266,116 @@ const registerBirth: EffectHandler = async (ctx) => {
   }
 };
 
+/** Evento reproductivo (servicio/destete) por cada animal afectado. */
+function reproEvent(type: ReproEventType, label: string): EffectHandler {
+  return async (ctx) => {
+    if (!ctx.animals.length) return `No encontré los animales para "${label}".`;
+    const sire = pick(ctx.metadata, ['toro', 'sire', 'sireTag', 'padre']);
+    await Promise.all(
+      ctx.animals.map((a) =>
+        ctx.prisma.reproductiveEvent.create({
+          data: {
+            type,
+            sireTagId: type === 'SERVICIO' && sire ? String(sire) : null,
+            observations: ctx.observations,
+            animal: { connect: { id: a.id } },
+            establishment: { connect: { id: ctx.establishmentId } },
+          },
+        }),
+      ),
+    );
+    return `✅ ${label}: ${ctx.animals.length} animal(es).`;
+  };
+}
+
+/** Tacto/ecografía: crea el diagnóstico de preñez (usa el potrero del animal). */
+const registerPregnancyCheck: EffectHandler = async (ctx) => {
+  if (!ctx.animals.length) return 'No encontré los animales del tacto.';
+  const resRaw = normalize(String(pick(ctx.metadata, ['resultado', 'result', 'prenez', 'diagnostico']) ?? ''));
+  const result: PregnancyStatus | null = /pren|llena|cargada|gestante|posit/.test(resRaw)
+    ? 'PRENADA'
+    : /vac|negat/.test(resRaw)
+      ? 'VACIA'
+      : null;
+  if (!result) {
+    return `Anoté el tacto de ${ctx.animals.length} animal(es). Aclarame si quedó "preñada" o "vacía".`;
+  }
+  const checkType: CheckType = String(pick(ctx.metadata, ['tipo', 'checkType']) ?? '')
+    .toUpperCase()
+    .includes('ECO')
+    ? 'ECOGRAFIA'
+    : 'TACTO';
+  let done = 0;
+  for (const a of ctx.animals) {
+    if (!a.currentLocationId) continue; // el diagnóstico requiere potrero
+    await ctx.prisma.reproductiveCheck.create({
+      data: {
+        type: checkType,
+        result,
+        observations: ctx.observations,
+        animal: { connect: { id: a.id } },
+        potreroId: a.currentLocationId,
+        establishment: { connect: { id: ctx.establishmentId } },
+      },
+    });
+    done++;
+  }
+  const label = result === 'PRENADA' ? 'preñada(s)' : 'vacía(s)';
+  const faltantes = ctx.animals.length - done;
+  return `✅ Tacto: ${done} ${label}${faltantes > 0 ? ` (${faltantes} sin potrero, quedaron solo anotadas)` : ''}.`;
+};
+
+/** Castración: marca el macho como castrado (afecta la categoría → novillo). */
+const castrate: EffectHandler = async (ctx) => {
+  if (!ctx.animals.length) return 'No encontré el animal a castrar.';
+  await Promise.all(
+    ctx.animals.map((a) =>
+      ctx.prisma.animal.update({
+        where: { id: a.id },
+        data: {
+          metadata: { ...(a.metadata ?? {}), castrado: true, entero: false } as Prisma.InputJsonValue,
+        },
+      }),
+    ),
+  );
+  return `✅ Castración registrada: ${ctx.animals.length} animal(es).`;
+};
+
+/** Condición corporal: guarda el puntaje en la metadata del animal. */
+const bodyCondition: EffectHandler = async (ctx) => {
+  const score = num(pick(ctx.metadata, ['score', 'cc', 'condicion', 'estado', 'puntaje']));
+  if (score == null) return 'No entendí el puntaje de condición corporal.';
+  if (!ctx.animals.length) return 'No encontré el animal.';
+  await Promise.all(
+    ctx.animals.map((a) =>
+      ctx.prisma.animal.update({
+        where: { id: a.id },
+        data: {
+          metadata: { ...(a.metadata ?? {}), condicionCorporal: score } as Prisma.InputJsonValue,
+        },
+      }),
+    ),
+  );
+  return `✅ Condición corporal ${score} en ${ctx.animals.length} animal(es).`;
+};
+
+/** Cambio de caravana: renombra el tagId de un animal. */
+const changeTag: EffectHandler = async (ctx) => {
+  const nueva = pick(ctx.metadata, ['nuevaCaravana', 'nueva', 'newTag', 'nuevoTag', 'nuevoId']);
+  if (!nueva) return 'No entendí la nueva caravana.';
+  if (ctx.animals.length !== 1) return 'Para cambiar la caravana, indicá un solo animal.';
+  const a = ctx.animals[0];
+  try {
+    await ctx.prisma.animal.update({ where: { id: a.id }, data: { tagId: String(nueva) } });
+    return `✅ Caravana ${a.tagId} → ${String(nueva)}.`;
+  } catch (err) {
+    if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2002') {
+      return `La caravana ${String(nueva)} ya existe.`;
+    }
+    throw err;
+  }
+};
+
 // --------------------- Registro (agregar acciones = 1 línea) ----------------
 const EFFECT_HANDLERS: Record<string, EffectHandler> = {
   BAJA_MUERTE: setStatus('DECEASED', 'Baja por muerte'),
@@ -270,6 +394,16 @@ const EFFECT_HANDLERS: Record<string, EffectHandler> = {
   PESAJE: createWeight,
   NACIMIENTO: registerBirth,
   PARTO: registerBirth,
+  SERVICIO: reproEvent('SERVICIO', 'Servicio'),
+  INSEMINACION: reproEvent('SERVICIO', 'Servicio'),
+  DESTETE: reproEvent('DESTETE', 'Destete'),
+  TACTO: registerPregnancyCheck,
+  ECOGRAFIA: registerPregnancyCheck,
+  PRENEZ: registerPregnancyCheck,
+  DIAGNOSTICO_PRENEZ: registerPregnancyCheck,
+  CASTRACION: castrate,
+  CONDICION_CORPORAL: bodyCondition,
+  CAMBIO_CARAVANA: changeTag,
 };
 
 /** Devuelve el efecto para un eventType, o null si solo se registra en bitácora. */

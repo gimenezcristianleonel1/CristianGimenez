@@ -62,7 +62,7 @@ export class WhatsappService {
         return;
       }
 
-      const answer = await this.processor.process(establishmentId, parsed);
+      const answer = await this.processor.process(establishmentId, parsed, text);
       await this.reply(from, answer);
     } catch (err) {
       this.logger.error(`handleIncoming: ${(err as Error).message}`);

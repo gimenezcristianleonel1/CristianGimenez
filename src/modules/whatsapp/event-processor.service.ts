@@ -20,7 +20,7 @@ export class EventProcessorService {
 
   constructor(private readonly prisma: PrismaService) {}
 
-  async process(establishmentId: string, ev: ParsedEvent): Promise<string> {
+  async process(establishmentId: string, ev: ParsedEvent, rawText?: string): Promise<string> {
     const type = (ev.eventType || 'NOTA').toUpperCase();
     const animals = await this.resolveTargets(establishmentId, ev);
     const effect = getEffect(type);
@@ -45,6 +45,9 @@ export class EventProcessorService {
 
     // Log genérico e idempotente-friendly: siempre deja rastro en la bitácora.
     await this.logEvents(establishmentId, type, ev, animals);
+    // Aprendizaje: registra el comando (frecuencia + ejemplo + si tiene efecto)
+    // para ir viendo qué dicen los operarios y qué acciones conviene agregar.
+    await this.learnCommand(establishmentId, type, rawText, !!effect);
 
     if (!animals.length && !effect) {
       return 'No pude identificar el animal. Ej: "murió la 120" o "pesé 320 la 140".';
@@ -53,6 +56,51 @@ export class EventProcessorService {
       effectMsg ||
       `✅ Registrado "${type}"${animals.length ? ` en ${animals.length} animal(es)` : ''}.`
     );
+  }
+
+  /**
+   * Vocabulario aprendido del bot (guardado en `Establishment.metadata.bot.commands`,
+   * sin migración). Por cada eventType acumula: cuántas veces se usó, un ejemplo
+   * del mensaje, cuándo se vio y si ya tiene un efecto. Así el bot "aprende" qué
+   * comandos usan los operarios y cuáles conviene promover a acciones reales.
+   */
+  private async learnCommand(
+    establishmentId: string,
+    type: string,
+    rawText: string | undefined,
+    handled: boolean,
+  ): Promise<void> {
+    try {
+      const est = await this.prisma.establishment.findUnique({
+        where: { id: establishmentId },
+        select: { metadata: true },
+      });
+      const meta = ((est?.metadata as Record<string, unknown>) ?? {}) as Record<string, unknown>;
+      const bot = ((meta.bot as Record<string, unknown>) ?? {}) as Record<string, unknown>;
+      type CmdStat = {
+        count: number;
+        firstSeen: string;
+        lastSeen: string;
+        sample: string;
+        handled: boolean;
+      };
+      const commands = ((bot.commands as Record<string, CmdStat>) ?? {}) as Record<string, CmdStat>;
+      const now = new Date().toISOString();
+      const prev = commands[type];
+      commands[type] = {
+        count: (prev?.count ?? 0) + 1,
+        firstSeen: prev?.firstSeen ?? now,
+        lastSeen: now,
+        sample: prev?.sample ?? (rawText ? rawText.slice(0, 200) : type),
+        handled: handled || (prev?.handled ?? false),
+      };
+      await this.prisma.establishment.update({
+        where: { id: establishmentId },
+        data: { metadata: { ...meta, bot: { ...bot, commands } } as Prisma.InputJsonValue },
+      });
+    } catch (e) {
+      this.logger.warn(`learnCommand falló: ${(e as Error).message}`);
+    }
   }
 
   /** Caravanas explícitas + (opcional) todos los activos de un potrero de grupo. */
