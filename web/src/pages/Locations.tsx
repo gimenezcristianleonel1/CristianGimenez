@@ -2,6 +2,7 @@ import { Link } from 'react-router-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../db/db';
 import { locationTypeLabel } from '../lib/labels';
+import { Icon } from '../components/Icon';
 
 export default function Locations() {
   const locations = useLiveQuery(() => db.locations.toArray(), [], []);
@@ -64,7 +65,13 @@ export default function Locations() {
           })
       )}
 
-      <Link className="fab" to="/locations/new" aria-label="Nuevo potrero">
+      <Link
+        className="fab"
+        to="/locations/new"
+        aria-label="Nuevo potrero"
+        style={{ bottom: 'calc(140px + env(safe-area-inset-bottom))' }}
+      >
+        <Icon name="plus" size={22} />
         <span>Nuevo potrero</span>
       </Link>
     </div>
